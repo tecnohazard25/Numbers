@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { X, Building2 } from "lucide-react";
 import {
   SUPPORTED_LOCALES,
   CURRENCIES,
@@ -172,9 +173,11 @@ export default function NewOrganizationPage() {
                 variant="outline"
                 onClick={() => router.push("/superadmin")}
               >
+                <X className="h-4 w-4 mr-1" />
                 Annulla
               </Button>
               <Button type="submit" disabled={isLoading}>
+                <Building2 className="h-4 w-4 mr-1" />
                 {isLoading ? "Creazione..." : "Crea Organizzazione"}
               </Button>
             </div>

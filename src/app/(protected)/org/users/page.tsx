@@ -30,7 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
 interface User {
@@ -200,7 +200,11 @@ export default function OrgUsersPage() {
                 size="sm"
                 onClick={() => handleToggle(user.id, user.is_active)}
               >
-                {user.is_active ? "Disattiva" : "Riattiva"}
+                {user.is_active ? (
+                  <><Ban className="h-4 w-4 mr-1" />Disattiva</>
+                ) : (
+                  <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
+                )}
               </Button>
               <Button
                 variant="destructive"
@@ -277,9 +281,11 @@ export default function OrgUsersPage() {
                   </div>
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                      <X className="h-4 w-4 mr-1" />
                       Annulla
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
+                      <UserPlus className="h-4 w-4 mr-1" />
                       {isSubmitting ? "Creazione..." : "Crea Utente"}
                     </Button>
                   </DialogFooter>
@@ -371,9 +377,11 @@ export default function OrgUsersPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>
+              <X className="h-4 w-4 mr-1" />
               Annulla
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+              <Save className="h-4 w-4 mr-1" />
               {isSubmitting ? "Salvataggio..." : "Salva"}
             </Button>
           </DialogFooter>
@@ -393,9 +401,11 @@ export default function OrgUsersPage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteUser(null)}>
+              <X className="h-4 w-4 mr-1" />
               Annulla
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
+              <Trash2 className="h-4 w-4 mr-1" />
               {isSubmitting ? "Eliminazione..." : "Elimina"}
             </Button>
           </DialogFooter>
