@@ -5,7 +5,7 @@ import { Organization } from "@/types/supabase";
 import { OrganizationsTable } from "./organizations-table";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Building2, Plus } from "lucide-react";
 
 export default function SuperadminPage() {
   const [organizations, setOrganizations] = useState<Organization[]>([]);
@@ -19,7 +19,10 @@ export default function SuperadminPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold">Organizzazioni</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Building2 className="h-6 w-6" />
+          Organizzazioni
+        </h1>
         <Link href="/superadmin/organizations/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />

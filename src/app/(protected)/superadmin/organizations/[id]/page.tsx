@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/users";
 import { updateOrganizationSettingsAction } from "@/app/actions/organizations";
 import { DataGrid } from "@/components/data-grid";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -444,6 +445,40 @@ export default function OrganizationDetailPage() {
             rowData={users}
             columnDefs={columnDefs}
             exportFileName={`utenti-${org.slug}`}
+            renderMobileCard={(user) => (
+              <div key={user.id} className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">
+                    {user.first_name} {user.last_name}
+                  </span>
+                  <Badge variant={user.is_active ? "default" : "secondary"}>
+                    {user.is_active ? "Attivo" : "Disattivo"}
+                  </Badge>
+                </div>
+                <div className="text-sm text-muted-foreground">{user.email}</div>
+                <div className="flex gap-1 flex-wrap">
+                  {user.user_roles.map((ur) => (
+                    <Badge key={ur.roles.name} variant="outline">
+                      {ur.roles.name}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
+                    <Pencil className="h-4 w-4 mr-1" /> Modifica
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => handleImpersonate(user.id)}>
+                    <UserCheck className="h-4 w-4 mr-1" /> Impersona
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => handleToggle(user.id, user.is_active)}>
+                    {user.is_active ? "Disattiva" : "Riattiva"}
+                  </Button>
+                  <Button variant="destructive" size="sm" onClick={() => setDeleteUser(user)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
           />
         </CardContent>
       </Card>

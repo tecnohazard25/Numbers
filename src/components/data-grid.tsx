@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef, type ReactNode } from "react";
 import { AgGridReact } from "ag-grid-react";
 import {
   AllCommunityModule,
@@ -10,6 +10,7 @@ import {
   type GridApi,
   themeQuartz,
 } from "ag-grid-community";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -107,6 +108,7 @@ interface DataGridProps<T> {
   pagination?: boolean;
   paginationPageSize?: number;
   exportFileName?: string;
+  renderMobileCard?: (item: T, index: number) => ReactNode;
 }
 
 export function DataGrid<T>({
@@ -117,9 +119,11 @@ export function DataGrid<T>({
   pagination = false,
   paginationPageSize = 20,
   exportFileName = "export",
+  renderMobileCard,
 }: DataGridProps<T>) {
   const gridRef = useRef<AgGridReact<T>>(null);
   const gridApiRef = useRef<GridApi<T> | null>(null);
+  const isMobile = useIsMobile();
 
   const defaultColDef = useMemo<ColDef<T>>(
     () => ({
@@ -139,52 +143,80 @@ export function DataGrid<T>({
   }, []);
 
   const handleExport = useCallback(() => {
-    const api = gridApiRef.current;
-    if (!api) return;
-
-    // Get visible columns (exclude "Azioni")
+    // Export works from rowData directly when on mobile (no grid API)
     const cols = columnDefs.filter(
       (c) => c.headerName && c.headerName !== "Azioni"
     );
-
-    // Build header row
     const headers = cols.map((c) => c.headerName ?? "");
 
-    // Build data rows
     const rows: (string | number | boolean | null)[][] = [];
-    api.forEachNodeAfterFilterAndSort((node) => {
-      if (!node.data) return;
-      const row = cols.map((col) => {
-        const field = col.field as string | undefined;
-        const valueGetter = col.valueGetter;
-        const valueFormatter = col.valueFormatter;
 
-        let value: any;
-        if (valueGetter && typeof valueGetter === "function") {
-          value = valueGetter({ data: node.data, node, colDef: col } as any);
-        } else if (field) {
-          value = (node.data as any)[field];
-        }
+    const dataSource = gridApiRef.current ? [] : rowData;
 
-        if (valueFormatter && typeof valueFormatter === "function") {
-          value = valueFormatter({ value, data: node.data, node, colDef: col } as any);
-        }
+    if (gridApiRef.current) {
+      gridApiRef.current.forEachNodeAfterFilterAndSort((node) => {
+        if (!node.data) return;
+        const row = cols.map((col) => {
+          const field = col.field as string | undefined;
+          const valueGetter = col.valueGetter;
+          const valueFormatter = col.valueFormatter;
 
-        return value ?? "";
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let value: any;
+          if (valueGetter && typeof valueGetter === "function") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value = valueGetter({ data: node.data, node, colDef: col } as any);
+          } else if (field) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value = (node.data as any)[field];
+          }
+
+          if (valueFormatter && typeof valueFormatter === "function") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value = valueFormatter({ value, data: node.data, node, colDef: col } as any);
+          }
+
+          return value ?? "";
+        });
+        rows.push(row);
       });
-      rows.push(row);
-    });
+    } else {
+      // Mobile: use rowData directly
+      for (const item of dataSource) {
+        const row = cols.map((col) => {
+          const field = col.field as string | undefined;
+          const valueGetter = col.valueGetter;
+          const valueFormatter = col.valueFormatter;
+
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          let value: any;
+          if (valueGetter && typeof valueGetter === "function") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value = valueGetter({ data: item, colDef: col } as any);
+          } else if (field) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value = (item as any)[field];
+          }
+
+          if (valueFormatter && typeof valueFormatter === "function") {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            value = valueFormatter({ value, data: item, colDef: col } as any);
+          }
+
+          return value ?? "";
+        });
+        rows.push(row);
+      }
+    }
 
     const wsData = [headers, ...rows];
     const ws = XLSX.utils.aoa_to_sheet(wsData);
-
-    // Auto-size columns
     ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 15) }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Dati");
     XLSX.writeFile(wb, `${exportFileName}.xlsx`);
-  }, [exportFileName, columnDefs]);
+  }, [exportFileName, columnDefs, rowData]);
 
   const containerStyle = useMemo(
     () => ({
@@ -194,6 +226,30 @@ export function DataGrid<T>({
     [domLayout, height]
   );
 
+  // Mobile: card view
+  if (isMobile && renderMobileCard) {
+    return (
+      <div className="space-y-3">
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={handleExport}>
+            <Download className="h-4 w-4 mr-1" />
+            Esporta Excel
+          </Button>
+        </div>
+        {rowData.length === 0 ? (
+          <p className="text-muted-foreground text-center py-8">
+            Nessun dato da mostrare
+          </p>
+        ) : (
+          <div className="space-y-3">
+            {rowData.map((item, i) => renderMobileCard(item, i))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Desktop: AG Grid
   return (
     <div className="space-y-3">
       <div className="flex justify-end">

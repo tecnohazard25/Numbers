@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Pencil, Settings, Ban, RefreshCw, Trash2, X, Save } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
 interface Props {
@@ -167,6 +168,52 @@ export function OrganizationsTable({ organizations }: Props) {
         rowData={organizations}
         columnDefs={columnDefs}
         exportFileName="organizzazioni"
+        renderMobileCard={(org) => (
+          <div key={org.id} className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">{org.name}</span>
+              <Badge variant={org.is_active ? "default" : "secondary"}>
+                {org.is_active ? "Attiva" : "Disattiva"}
+              </Badge>
+            </div>
+            <div className="text-sm text-muted-foreground">
+              Creata: {new Date(org.created_at).toLocaleDateString("it-IT")}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setRenameOrg(org);
+                  setNewName(org.name);
+                }}
+              >
+                Rinomina
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => router.push(`/superadmin/organizations/${org.id}`)}
+              >
+                Gestisci
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleToggle(org.id, org.is_active)}
+              >
+                {org.is_active ? "Disattiva" : "Riattiva"}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteOrg(org)}
+              >
+                Elimina
+              </Button>
+            </div>
+          </div>
+        )}
       />
 
       <Dialog
