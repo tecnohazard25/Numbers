@@ -44,7 +44,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ArrowLeft, Pencil, Plus, Trash2, UserCheck } from "lucide-react";
+import { ArrowLeft, Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserCheck, UserPlus, X } from "lucide-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
 interface User {
@@ -308,7 +308,11 @@ export default function OrganizationDetailPage() {
                 size="sm"
                 onClick={() => handleToggle(user.id, user.is_active)}
               >
-                {user.is_active ? "Disattiva" : "Riattiva"}
+                {user.is_active ? (
+                  <><Ban className="h-4 w-4 mr-1" />Disattiva</>
+                ) : (
+                  <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
+                )}
               </Button>
               <Button
                 variant="destructive"
@@ -422,9 +426,11 @@ export default function OrganizationDetailPage() {
                       variant="outline"
                       onClick={() => setCreateDialogOpen(false)}
                     >
+                      <X className="h-4 w-4 mr-1" />
                       Annulla
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
+                      <UserPlus className="h-4 w-4 mr-1" />
                       {isSubmitting ? "Creazione..." : "Crea Utente"}
                     </Button>
                   </DialogFooter>
@@ -528,9 +534,11 @@ export default function OrganizationDetailPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>
+              <X className="h-4 w-4 mr-1" />
               Annulla
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSubmitting}>
+              <Save className="h-4 w-4 mr-1" />
               {isSubmitting ? "Salvataggio..." : "Salva"}
             </Button>
           </DialogFooter>
@@ -615,6 +623,7 @@ export default function OrganizationDetailPage() {
 
           <div className="flex justify-end">
             <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
+              <Save className="h-4 w-4 mr-1" />
               {isSavingSettings ? "Salvataggio..." : "Salva impostazioni"}
             </Button>
           </div>
@@ -638,6 +647,7 @@ export default function OrganizationDetailPage() {
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteUser(null)}>
+              <X className="h-4 w-4 mr-1" />
               Annulla
             </Button>
             <Button
@@ -645,6 +655,7 @@ export default function OrganizationDetailPage() {
               onClick={handleDelete}
               disabled={isSubmitting}
             >
+              <Trash2 className="h-4 w-4 mr-1" />
               {isSubmitting ? "Eliminazione..." : "Elimina"}
             </Button>
           </DialogFooter>
