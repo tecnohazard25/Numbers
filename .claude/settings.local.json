@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app@latest . --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --turbopack)",
+      "Bash(where node:*)",
+      "Bash(where npm:*)",
+      "Bash(where npx:*)",
+      "Bash(cmd.exe /c \"where node 2>&1 & where npm 2>&1 & where npx 2>&1\")",
+      "Bash(cmd.exe /c \"node --version 2>&1\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Users/Utente/AppData/Roaming/npm\")",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs\")",
+      "Bash(npm --version)",
+      "Bash(npx create-next-app@latest ./temp-init --typescript --tailwind --eslint --app --src-dir --import-alias \"@/*\" --use-npm --turbopack)",
+      "Bash(shopt -s dotglob)",
+      "Bash(mv temp-init/* .)",
+      "Bash(mv temp-init/.* .)",
+      "Bash(npx shadcn@latest init -d --defaults)"
+    ]
+  }
+}
