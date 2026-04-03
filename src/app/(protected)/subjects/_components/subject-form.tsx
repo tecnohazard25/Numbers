@@ -22,7 +22,11 @@ import {
 import { toast } from "sonner";
 import {
   AlertTriangle,
+  FileText,
+  MapPin,
+  Phone,
   Plus,
+  Tags,
   Trash2,
   Save,
   ArrowLeft,
@@ -34,6 +38,7 @@ import {
   OctagonAlert,
   Store,
   User,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -505,7 +510,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       {/* Section 1: Type */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("subjects.subjectType")}</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Users className="h-4 w-4" />{t("subjects.subjectType")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -565,7 +570,8 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       {/* Section 2: Personal/Company data */}
       <Card>
         <CardHeader>
-          <CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            {isPerson ? <User className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
             {isPerson ? t("subjects.personalData") : t("subjects.companyData")}
           </CardTitle>
         </CardHeader>
@@ -726,7 +732,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       {/* Section 3: Common data */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("subjects.commonData")}</CardTitle>
+          <CardTitle className="flex items-center gap-2"><FileText className="h-4 w-4" />{t("subjects.commonData")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -755,7 +761,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       {/* Section 4: Addresses */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t("subjects.addresses")}</CardTitle>
+          <CardTitle className="flex items-center gap-2"><MapPin className="h-4 w-4" />{t("subjects.addresses")}</CardTitle>
           <Button variant="outline" size="sm" onClick={addAddress}>
             <Plus className="h-4 w-4 mr-1" />
             {t("common.add")}
@@ -895,7 +901,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       {/* Section 5: Contacts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>{t("subjects.contacts")}</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Phone className="h-4 w-4" />{t("subjects.contacts")}</CardTitle>
           <Button variant="outline" size="sm" onClick={addContact}>
             <Plus className="h-4 w-4 mr-1" />
             {t("common.add")}
@@ -968,7 +974,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       {/* Section 6: Tags */}
       <Card>
         <CardHeader>
-          <CardTitle>{t("subjects.tags")}</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Tags className="h-4 w-4" />{t("subjects.tags")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Selected tags */}

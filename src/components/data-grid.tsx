@@ -427,7 +427,7 @@ export function DataGrid<T>({
               <TooltipTrigger render={
                 <button
                   type="button"
-                  className="p-1 rounded hover:bg-muted transition-colors"
+                  className="p-1 rounded hover:bg-muted transition-colors cursor-pointer"
                   onClick={() => onEdit(params.data!)}
                 >
                   <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
@@ -443,6 +443,14 @@ export function DataGrid<T>({
 
   // --- Selection for delete ---
   const [selectedRows, setSelectedRows] = useState<T[]>([]);
+
+  // Reset selection when data changes (e.g. after delete)
+  useEffect(() => {
+    setSelectedRows([]);
+    if (gridApiRef.current) {
+      gridApiRef.current.deselectAll();
+    }
+  }, [rowData]);
 
   const onSelectionChanged = useCallback(() => {
     if (!gridApiRef.current || !onDelete) return;

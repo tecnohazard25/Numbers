@@ -462,15 +462,27 @@ export default function SubjectsPage() {
               <SelectValue placeholder={t("subjects.type")}>
                 {typeFilter === "all"
                   ? t("subjects.allTypes")
-                  : TYPE_LABELS[typeFilter as SubjectType] ?? typeFilter}
+                  : (() => { const Icon = TYPE_ICONS[typeFilter as SubjectType]; return (
+                    <span className="flex items-center gap-1.5">
+                      {Icon && <Icon className="h-3.5 w-3.5" />}
+                      {TYPE_LABELS[typeFilter as SubjectType] ?? typeFilter}
+                    </span>
+                  ); })()}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">{t("subjects.allTypes")}</SelectItem>
-              <SelectItem value="person">{t("subjects.person")}</SelectItem>
-              <SelectItem value="company">{t("subjects.company")}</SelectItem>
-              <SelectItem value="sole_trader">{t("subjects.soleTrader")}</SelectItem>
-              <SelectItem value="public_administration">{t("subjects.publicAdminShort")}</SelectItem>
+              {(Object.keys(TYPE_ICONS) as SubjectType[]).map((st) => {
+                const Icon = TYPE_ICONS[st];
+                return (
+                  <SelectItem key={st} value={st}>
+                    <span className="flex items-center gap-1.5">
+                      <Icon className="h-3.5 w-3.5" />
+                      {TYPE_LABELS[st]}
+                    </span>
+                  </SelectItem>
+                );
+              })}
             </SelectContent>
           </Select>
           <Select value={tagFilter} onValueChange={(v) => setTagFilter(v ?? "all")}>
