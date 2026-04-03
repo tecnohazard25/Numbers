@@ -2,14 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, Receipt, Tags } from "lucide-react";
+import { Settings, Receipt, Tags, Landmark } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { VatCodesSection } from "./_components/vat-codes-section";
 import { TagsSection } from "./_components/tags-section";
+import { CollectionResourcesSection } from "./_components/collection-resources-section";
 
 const TABS = [
   { key: "vat-codes", icon: Receipt, labelKey: "settings.vatCodes.title" },
   { key: "tags", icon: Tags, labelKey: "settings.tags.title" },
+  { key: "collection-resources", icon: Landmark, labelKey: "settings.collectionResources.title" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -73,6 +75,7 @@ export default function SettingsPage() {
       <div className="flex-1 min-h-0">
         {activeTab === "vat-codes" && <VatCodesSection orgId={orgId} />}
         {activeTab === "tags" && <TagsSection orgId={orgId} />}
+        {activeTab === "collection-resources" && <CollectionResourcesSection orgId={orgId} />}
       </div>
     </div>
   );
