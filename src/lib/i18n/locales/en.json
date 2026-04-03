@@ -284,6 +284,28 @@
       "noResourcesConfigured": "No collection resources configured.",
       "confirmDelete": "Confirm Deletion",
       "confirmDeleteDesc": "Are you sure you want to delete the resource"
+    },
+    "paymentTypes": {
+      "title": "Payment Types",
+      "description": "Manage payment methods accepted by the medical center",
+      "newType": "New Type",
+      "editType": "Edit Payment Type",
+      "newTypeTitle": "New Payment Type",
+      "name": "Name",
+      "namePlaceholder": "e.g. PayPal, Satispay...",
+      "code": "Code",
+      "codePlaceholder": "e.g. paypal, satispay...",
+      "system": "System",
+      "custom": "Custom",
+      "created": "Payment type created",
+      "updated": "Payment type updated",
+      "deleted": "Payment type deleted",
+      "deactivated": "Deactivated",
+      "deactivatedMsg": "Payment type deactivated",
+      "reactivated": "Payment type reactivated",
+      "noTypesConfigured": "No payment types configured.",
+      "confirmDelete": "Confirm Deletion",
+      "confirmDeleteDesc": "Are you sure you want to delete the payment type"
     }
   },
   "users": {

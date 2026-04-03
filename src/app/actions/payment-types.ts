@@ -1,0 +1,191 @@
+"use server";
+
+import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
+import { revalidatePath } from "next/cache";
+
+function canManagePaymentTypes(roles: string[]): boolean {
+  return roles.includes("accountant");
+}
+
+interface PaymentTypeInput {
+  name: string;
+  code: string;
+}
+
+export async function createPaymentTypeAction(data: PaymentTypeInput) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  if (!canManagePaymentTypes(currentUser.roles)) {
+    return { error: "Non autorizzato" };
+  }
+
+  const organizationId = currentUser.profile.organization_id;
+  if (!organizationId) return { error: "Organizzazione non trovata" };
+
+  if (!data.name?.trim()) return { error: "Nome obbligatorio" };
+  if (!data.code?.trim()) return { error: "Codice obbligatorio" };
+
+  const admin = createAdminClient();
+
+  const { data: paymentType, error } = await admin
+    .from("payment_types")
+    .insert({
+      organization_id: organizationId,
+      name: data.name.trim(),
+      code: data.code.trim().toLowerCase(),
+      is_system: false,
+      created_by: currentUser.profile.id,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Esiste già un tipo di pagamento con questo codice" };
+    }
+    return { error: `Errore nella creazione: ${error.message}` };
+  }
+
+  revalidatePath("/settings");
+  return { success: true, paymentType };
+}
+
+export async function updatePaymentTypeAction(
+  paymentTypeId: string,
+  data: PaymentTypeInput
+) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  if (!canManagePaymentTypes(currentUser.roles)) {
+    return { error: "Non autorizzato" };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("payment_types")
+    .select("organization_id, is_system")
+    .eq("id", paymentTypeId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Tipo di pagamento non trovato" };
+  }
+
+  // System types: only allow toggling is_active, not editing name/code
+  if (existing.is_system) {
+    return { error: "I tipi di sistema non possono essere modificati" };
+  }
+
+  if (!data.name?.trim()) return { error: "Nome obbligatorio" };
+  if (!data.code?.trim()) return { error: "Codice obbligatorio" };
+
+  const { data: paymentType, error } = await admin
+    .from("payment_types")
+    .update({
+      name: data.name.trim(),
+      code: data.code.trim().toLowerCase(),
+    })
+    .eq("id", paymentTypeId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Esiste già un tipo di pagamento con questo codice" };
+    }
+    return { error: `Errore nell'aggiornamento: ${error.message}` };
+  }
+
+  revalidatePath("/settings");
+  return { success: true, paymentType };
+}
+
+export async function togglePaymentTypeActiveAction(paymentTypeId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  if (!canManagePaymentTypes(currentUser.roles)) {
+    return { error: "Non autorizzato" };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("payment_types")
+    .select("organization_id, is_active")
+    .eq("id", paymentTypeId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Tipo di pagamento non trovato" };
+  }
+
+  const newActive = !existing.is_active;
+  const { error } = await admin
+    .from("payment_types")
+    .update({
+      is_active: newActive,
+      deleted_at: newActive ? null : new Date().toISOString(),
+    })
+    .eq("id", paymentTypeId);
+
+  if (error) {
+    return { error: `Errore nell'aggiornamento: ${error.message}` };
+  }
+
+  revalidatePath("/settings");
+  return { success: true, is_active: newActive };
+}
+
+export async function deletePaymentTypeAction(paymentTypeId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  if (!canManagePaymentTypes(currentUser.roles)) {
+    return { error: "Non autorizzato" };
+  }
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("payment_types")
+    .select("organization_id, is_system")
+    .eq("id", paymentTypeId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Tipo di pagamento non trovato" };
+  }
+
+  if (existing.is_system) {
+    return { error: "I tipi di sistema non possono essere eliminati" };
+  }
+
+  // Try physical delete first; if FK constraint fails, do soft delete
+  const { error: deleteError } = await admin
+    .from("payment_types")
+    .delete()
+    .eq("id", paymentTypeId);
+
+  if (deleteError) {
+    if (deleteError.code === "23503") {
+      const { error: softError } = await admin
+        .from("payment_types")
+        .update({ is_active: false, deleted_at: new Date().toISOString() })
+        .eq("id", paymentTypeId);
+
+      if (softError) {
+        return { error: `Errore nella disattivazione: ${softError.message}` };
+      }
+    } else {
+      return { error: `Errore nell'eliminazione: ${deleteError.message}` };
+    }
+  }
+
+  revalidatePath("/settings");
+  return { success: true };
+}

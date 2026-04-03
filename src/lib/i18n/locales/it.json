@@ -284,6 +284,28 @@
       "noResourcesConfigured": "Nessuna risorsa di incasso configurata.",
       "confirmDelete": "Conferma Eliminazione",
       "confirmDeleteDesc": "Sei sicuro di voler eliminare la risorsa"
+    },
+    "paymentTypes": {
+      "title": "Tipi di Pagamento",
+      "description": "Gestisci i metodi di pagamento accettati dal centro medico",
+      "newType": "Nuovo Tipo",
+      "editType": "Modifica Tipo di Pagamento",
+      "newTypeTitle": "Nuovo Tipo di Pagamento",
+      "name": "Nome",
+      "namePlaceholder": "es. PayPal, Satispay...",
+      "code": "Codice",
+      "codePlaceholder": "es. paypal, satispay...",
+      "system": "Sistema",
+      "custom": "Personalizzato",
+      "created": "Tipo di pagamento creato",
+      "updated": "Tipo di pagamento aggiornato",
+      "deleted": "Tipo di pagamento eliminato",
+      "deactivated": "Disattivato",
+      "deactivatedMsg": "Tipo di pagamento disattivato",
+      "reactivated": "Tipo di pagamento riattivato",
+      "noTypesConfigured": "Nessun tipo di pagamento configurato.",
+      "confirmDelete": "Conferma Eliminazione",
+      "confirmDeleteDesc": "Sei sicuro di voler eliminare il tipo di pagamento"
     }
   },
   "users": {
