@@ -283,7 +283,9 @@
       "deactivated": "Disattivata",
       "noResourcesConfigured": "Nessuna risorsa di incasso configurata.",
       "confirmDelete": "Conferma Eliminazione",
-      "confirmDeleteDesc": "Sei sicuro di voler eliminare la risorsa"
+      "confirmDeleteDesc": "Sei sicuro di voler eliminare la risorsa",
+      "seedDefault": "Popola con risorse predefinite",
+      "seedLoaded": "Risorse predefinite caricate"
     }
   },
   "users": {

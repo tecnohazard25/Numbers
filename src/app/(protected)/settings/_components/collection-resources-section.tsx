@@ -24,6 +24,7 @@ import {
   createCollectionResourceAction,
   updateCollectionResourceAction,
   deleteCollectionResourceAction,
+  seedCollectionResourcesAction,
 } from "@/app/actions/collection-resources";
 import { validateIbanAction } from "@/app/actions/iban";
 import type { CollectionResource, CollectionResourceType } from "@/types/supabase";
@@ -170,8 +171,22 @@ export function CollectionResourcesSection({ orgId }: Props) {
       </div>
 
       {resources.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-8 space-y-4">
           <p className="text-muted-foreground">{t("settings.collectionResources.noResourcesConfigured")}</p>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              setIsSubmitting(true);
+              const result = await seedCollectionResourcesAction();
+              if (result.error) toast.error(result.error);
+              else { toast.success(t("settings.collectionResources.seedLoaded")); loadData(); }
+              setIsSubmitting(false);
+            }}
+            disabled={isSubmitting}
+          >
+            <Landmark className="h-4 w-4 mr-1" />
+            {isSubmitting ? t("common.loading") : t("settings.collectionResources.seedDefault")}
+          </Button>
         </div>
       ) : (
         <div className="space-y-2">
