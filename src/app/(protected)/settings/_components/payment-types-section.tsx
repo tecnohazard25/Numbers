@@ -12,30 +12,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { CreditCard, Pencil, Save, Trash2, X, Power, PowerOff } from "lucide-react";
+import { CreditCard, Pencil, Save, Trash2, X, Power, PowerOff, Eye, EyeOff } from "lucide-react";
 import {
   createPaymentTypeAction,
   updatePaymentTypeAction,
   deletePaymentTypeAction,
   togglePaymentTypeActiveAction,
+  seedPaymentTypesAction,
 } from "@/app/actions/payment-types";
 import type { PaymentType } from "@/types/supabase";
 import { useTranslation } from "@/lib/i18n/context";
-
-function SystemBadge({ isSystem, t }: { isSystem: boolean; t: (key: string) => string }) {
-  if (isSystem) {
-    return (
-      <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-        {t("settings.paymentTypes.system")}
-      </span>
-    );
-  }
-  return (
-    <span className="text-xs font-medium px-2 py-0.5 rounded bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200">
-      {t("settings.paymentTypes.custom")}
-    </span>
-  );
-}
 
 function toSnakeCase(str: string): string {
   return str
@@ -70,12 +56,17 @@ export function PaymentTypesSection({ orgId }: Props) {
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<PaymentType | null>(null);
 
+  // Filter state
+  const [showDeactivated, setShowDeactivated] = useState(false);
+
   const loadData = useCallback(async () => {
-    const res = await fetch(`/api/payment-types?orgId=${orgId}`);
+    const params = new URLSearchParams({ orgId });
+    if (showDeactivated) params.set("includeDeactivated", "true");
+    const res = await fetch(`/api/payment-types?${params}`);
     const data = await res.json();
     setPaymentTypes(data.paymentTypes ?? []);
     setLoading(false);
-  }, [orgId]);
+  }, [orgId, showDeactivated]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -161,14 +152,44 @@ export function PaymentTypesSection({ orgId }: Props) {
           </h2>
           <p className="text-sm text-muted-foreground">{t("settings.paymentTypes.description")}</p>
         </div>
-        <Button size="sm" onClick={openCreate}>
-          {t("settings.paymentTypes.newType")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showDeactivated ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowDeactivated(!showDeactivated)}
+            title={showDeactivated ? t("settings.paymentTypes.hideDeactivated") : t("settings.paymentTypes.showDeactivated")}
+          >
+            {showDeactivated ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+            {t("settings.paymentTypes.deactivated")}
+          </Button>
+          <Button size="sm" onClick={openCreate}>
+            {t("settings.paymentTypes.newType")}
+          </Button>
+        </div>
       </div>
 
       {paymentTypes.length === 0 ? (
-        <div className="text-center py-8">
+        <div className="text-center py-8 space-y-3">
           <p className="text-muted-foreground">{t("settings.paymentTypes.noTypesConfigured")}</p>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={async () => {
+              setIsSubmitting(true);
+              const result = await seedPaymentTypesAction();
+              if (result.error) {
+                toast.error(result.error);
+              } else {
+                toast.success(t("settings.paymentTypes.seedLoaded"));
+                loadData();
+              }
+              setIsSubmitting(false);
+            }}
+          >
+            <CreditCard className="h-4 w-4 mr-1" />
+            {t("settings.paymentTypes.seedDefault")}
+          </Button>
         </div>
       ) : (
         <div className="space-y-2">
@@ -181,36 +202,32 @@ export function PaymentTypesSection({ orgId }: Props) {
                 <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded shrink-0">{pt.code}</span>
                 <div className="min-w-0">
                   <span className="font-medium text-sm block truncate">{pt.name}</span>
-                  <span className="text-xs text-muted-foreground flex items-center gap-2">
-                    <SystemBadge isSystem={pt.is_system} t={t} />
-                    {!pt.is_active && <span> — {t("settings.paymentTypes.deactivated")}</span>}
-                  </span>
+                  {!pt.is_active && (
+                    <span className="text-xs text-muted-foreground">
+                      {t("settings.paymentTypes.deactivated")}
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                {pt.is_system ? (
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    onClick={() => handleToggleActive(pt)}
-                    disabled={isSubmitting}
-                    title={pt.is_active ? t("common.deactivate") : t("common.reactivate")}
-                  >
-                    {pt.is_active
-                      ? <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
-                      : <Power className="h-3.5 w-3.5 text-green-600" />
-                    }
-                  </Button>
-                ) : (
-                  <>
-                    <Button variant="ghost" size="icon-sm" onClick={() => openEdit(pt)}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(pt)}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </>
-                )}
+                <Button variant="ghost" size="icon-sm" onClick={() => openEdit(pt)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => handleToggleActive(pt)}
+                  disabled={isSubmitting}
+                  title={pt.is_active ? t("common.deactivate") : t("common.reactivate")}
+                >
+                  {pt.is_active
+                    ? <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    : <Power className="h-3.5 w-3.5 text-green-600" />
+                  }
+                </Button>
+                <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(pt)}>
+                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                </Button>
               </div>
             </div>
           ))}

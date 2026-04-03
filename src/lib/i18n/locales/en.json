@@ -307,7 +307,11 @@
       "reactivated": "Payment type reactivated",
       "noTypesConfigured": "No payment types configured.",
       "confirmDelete": "Confirm Deletion",
-      "confirmDeleteDesc": "Are you sure you want to delete the payment type"
+      "confirmDeleteDesc": "Are you sure you want to delete the payment type",
+      "seedDefault": "Populate with default types",
+      "seedLoaded": "Default payment types loaded",
+      "showDeactivated": "Show deactivated",
+      "hideDeactivated": "Hide deactivated"
     }
   },
   "users": {

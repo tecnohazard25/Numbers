@@ -35,7 +35,6 @@ export async function createPaymentTypeAction(data: PaymentTypeInput) {
       organization_id: organizationId,
       name: data.name.trim(),
       code: data.code.trim().toLowerCase(),
-      is_system: false,
       created_by: currentUser.profile.id,
     })
     .select()
@@ -67,17 +66,12 @@ export async function updatePaymentTypeAction(
 
   const { data: existing } = await admin
     .from("payment_types")
-    .select("organization_id, is_system")
+    .select("organization_id")
     .eq("id", paymentTypeId)
     .single();
 
   if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
     return { error: "Tipo di pagamento non trovato" };
-  }
-
-  // System types: only allow toggling is_active, not editing name/code
-  if (existing.is_system) {
-    return { error: "I tipi di sistema non possono essere modificati" };
   }
 
   if (!data.name?.trim()) return { error: "Nome obbligatorio" };
@@ -141,6 +135,49 @@ export async function togglePaymentTypeActiveAction(paymentTypeId: string) {
   return { success: true, is_active: newActive };
 }
 
+const DEFAULT_PAYMENT_TYPES = [
+  { name: "Contanti", code: "cash" },
+  { name: "Bonifico Bancario", code: "bank_transfer" },
+  { name: "Carta di Credito", code: "credit_card" },
+  { name: "Carta di Debito", code: "debit_card" },
+  { name: "POS", code: "pos" },
+  { name: "Assegno", code: "check" },
+  { name: "Pagamento Online", code: "online_payment" },
+  { name: "Addebito Diretto (RID/SDD)", code: "direct_debit" },
+  { name: "Altro", code: "other" },
+];
+
+export async function seedPaymentTypesAction() {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  if (!canManagePaymentTypes(currentUser.roles)) {
+    return { error: "Non autorizzato" };
+  }
+
+  const organizationId = currentUser.profile.organization_id;
+  if (!organizationId) return { error: "Organizzazione non trovata" };
+
+  const admin = createAdminClient();
+
+  const rows = DEFAULT_PAYMENT_TYPES.map((r) => ({
+    organization_id: organizationId,
+    name: r.name,
+    code: r.code,
+    created_by: currentUser.profile.id,
+  }));
+
+  const { error } = await admin.from("payment_types").insert(rows);
+
+  if (error) {
+    console.error("Error seeding payment types:", error.message);
+    return { error: error.message };
+  }
+
+  revalidatePath("/settings");
+  return { success: true };
+}
+
 export async function deletePaymentTypeAction(paymentTypeId: string) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return { error: "Non autorizzato" };
@@ -153,16 +190,12 @@ export async function deletePaymentTypeAction(paymentTypeId: string) {
 
   const { data: existing } = await admin
     .from("payment_types")
-    .select("organization_id, is_system")
+    .select("organization_id")
     .eq("id", paymentTypeId)
     .single();
 
   if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
     return { error: "Tipo di pagamento non trovato" };
-  }
-
-  if (existing.is_system) {
-    return { error: "I tipi di sistema non possono essere eliminati" };
   }
 
   // Try physical delete first; if FK constraint fails, do soft delete

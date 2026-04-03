@@ -248,7 +248,11 @@ export function CollectionResourcesSection({ orgId }: Props) {
                 }
               }}>
                 <SelectTrigger className="!w-full">
-                  <SelectValue placeholder={t("settings.collectionResources.selectType")} />
+                  <SelectValue placeholder={t("settings.collectionResources.selectType")}>
+                    {TYPE_OPTIONS.find((o) => o.value === formType)
+                      ? t(TYPE_OPTIONS.find((o) => o.value === formType)!.labelKey)
+                      : null}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {TYPE_OPTIONS.map((opt) => (

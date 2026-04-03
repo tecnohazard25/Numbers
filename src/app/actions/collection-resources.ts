@@ -187,15 +187,13 @@ export async function seedCollectionResourcesAction() {
 
   const admin = createAdminClient();
 
-  const rows = DEFAULT_COLLECTION_RESOURCES
-    .filter((r) => r.type !== "bank_account")
-    .map((r) => ({
-      organization_id: organizationId,
-      name: r.name,
-      code: r.code,
-      type: r.type,
-      created_by: currentUser.profile.id,
-    }));
+  const rows = DEFAULT_COLLECTION_RESOURCES.map((r) => ({
+    organization_id: organizationId,
+    name: r.name,
+    code: r.code,
+    type: r.type,
+    created_by: currentUser.profile.id,
+  }));
 
   const { error } = await admin.from("collection_resources").insert(rows);
 

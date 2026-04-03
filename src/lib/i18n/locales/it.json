@@ -307,7 +307,11 @@
       "reactivated": "Tipo di pagamento riattivato",
       "noTypesConfigured": "Nessun tipo di pagamento configurato.",
       "confirmDelete": "Conferma Eliminazione",
-      "confirmDeleteDesc": "Sei sicuro di voler eliminare il tipo di pagamento"
+      "confirmDeleteDesc": "Sei sicuro di voler eliminare il tipo di pagamento",
+      "seedDefault": "Popola con tipi predefiniti",
+      "seedLoaded": "Tipi di pagamento predefiniti caricati",
+      "showDeactivated": "Mostra disattivati",
+      "hideDeactivated": "Nascondi disattivati"
     }
   },
   "users": {

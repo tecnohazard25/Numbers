@@ -11,12 +11,18 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
-  const { data: paymentTypes, error } = await admin
+  const includeDeactivated = searchParams.get("includeDeactivated") === "true";
+
+  let query = admin
     .from("payment_types")
     .select("*")
-    .eq("organization_id", orgId)
-    .is("deleted_at", null)
-    .order("is_system", { ascending: false })
+    .eq("organization_id", orgId);
+
+  if (!includeDeactivated) {
+    query = query.is("deleted_at", null);
+  }
+
+  const { data: paymentTypes, error } = await query
     .order("name");
 
   if (error) {
