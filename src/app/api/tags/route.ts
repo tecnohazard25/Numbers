@@ -13,7 +13,7 @@ export async function GET(request: Request) {
 
   const { data: tags, error } = await admin
     .from("tags")
-    .select("*")
+    .select("*, subject_tags(count)")
     .eq("organization_id", orgId)
     .order("name");
 
@@ -22,5 +22,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ tags: [] });
   }
 
-  return NextResponse.json({ tags: tags ?? [] });
+  // Map to include usage_count
+  const tagsWithCount = (tags ?? []).map((tag) => ({
+    ...tag,
+    usage_count: (tag as unknown as { subject_tags: { count: number }[] }).subject_tags?.[0]?.count ?? 0,
+    subject_tags: undefined,
+  }));
+
+  return NextResponse.json({ tags: tagsWithCount });
 }

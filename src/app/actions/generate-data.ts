@@ -26,6 +26,14 @@ const COMPANY_NAMES = [
   "Trasporti Rapidi", "Sicurezza Globale",
 ];
 
+const PA_NAMES = [
+  "Comune di", "Provincia di", "Regione", "Azienda Sanitaria Locale",
+  "Istituto Comprensivo", "Agenzia delle Entrate - Ufficio di",
+  "Camera di Commercio di", "Tribunale di", "Questura di",
+  "INPS - Sede di", "INAIL - Sede di", "Università degli Studi di",
+  "Ospedale Civile di", "Vigili del Fuoco - Comando di", "Prefettura di",
+];
+
 const CITIES = [
   { city: "Roma", province: "RM", zip: "001" },
   { city: "Milano", province: "MI", zip: "201" },
@@ -115,16 +123,22 @@ export async function generateRandomSubjectsAction(
   let created = 0;
 
   for (let i = 0; i < count; i++) {
-    const isPerson = Math.random() > 0.4; // 60% persons, 40% companies
-    const type = isPerson
-      ? "person"
-      : rand(["company", "sole_trader"] as const);
+    // 50% person, 30% company, 10% sole_trader, 10% public_administration
+    const r = Math.random();
+    const type = r < 0.5 ? "person" : r < 0.8 ? "company" : r < 0.9 ? "sole_trader" : "public_administration";
+    const isPerson = type === "person";
 
     const firstName = isPerson ? rand(FIRST_NAMES) : null;
     const lastName = isPerson ? rand(LAST_NAMES) : null;
-    const businessName = !isPerson
-      ? `${rand(COMPANY_NAMES)} ${rand(["S.r.l.", "S.p.A.", "S.n.c.", "S.a.s."])}`
-      : null;
+    let businessName: string | null = null;
+    if (type === "company") {
+      businessName = `${rand(COMPANY_NAMES)} ${rand(["S.r.l.", "S.p.A.", "S.n.c.", "S.a.s."])}`;
+    } else if (type === "sole_trader") {
+      businessName = `${rand(FIRST_NAMES)} ${rand(LAST_NAMES)} - ${rand(COMPANY_NAMES)}`;
+    } else if (type === "public_administration") {
+      const city = rand(CITIES);
+      businessName = `${rand(PA_NAMES)} ${city.city}`;
+    }
 
     const gender = isPerson
       ? (FIRST_NAMES.indexOf(firstName!) < 12 ? "M" : "F")

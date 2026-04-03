@@ -120,7 +120,7 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto space-y-6">
+    <div className="max-w-md mx-auto space-y-6 overflow-auto flex-1">
       <div>
         <Button
           variant="ghost"
