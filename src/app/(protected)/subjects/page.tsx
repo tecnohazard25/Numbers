@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { DataGrid } from "@/components/data-grid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +17,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import {
@@ -25,23 +25,29 @@ import {
   Pencil,
   Trash2,
   Ban,
+  Building2,
+  Landmark,
   RefreshCw,
+  Store,
+  User,
   Users,
   Search,
 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   deleteSubjectAction,
   toggleSubjectAction,
 } from "@/app/actions/subjects";
+import { SubjectForm } from "./_components/subject-form";
 import { useTranslation } from "@/lib/i18n/context";
 import type { SubjectWithDetails, Tag, SubjectType } from "@/types/supabase";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
-const TYPE_COLORS: Record<SubjectType, string> = {
-  person: "default",
-  company: "secondary",
-  sole_trader: "outline",
-  public_administration: "destructive",
+const TYPE_ICONS: Record<SubjectType, React.ComponentType<{ className?: string }>> = {
+  person: User,
+  company: Building2,
+  sole_trader: Store,
+  public_administration: Landmark,
 };
 
 function getSubjectName(s: SubjectWithDetails): string {
@@ -79,7 +85,6 @@ function getPrimaryContact(s: SubjectWithDetails): string {
 }
 
 export default function SubjectsPage() {
-  const router = useRouter();
   const { t, locale } = useTranslation();
   const [subjects, setSubjects] = useState<SubjectWithDetails[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -90,6 +95,11 @@ export default function SubjectsPage() {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [tagFilter, setTagFilter] = useState<string>("all");
   const [searchText, setSearchText] = useState("");
+
+  // Form dialog
+  const [formDialogOpen, setFormDialogOpen] = useState(false);
+  const [formSubject, setFormSubject] = useState<SubjectWithDetails | null>(null);
+  const [formLoading, setFormLoading] = useState(false);
 
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -102,9 +112,9 @@ export default function SubjectsPage() {
     public_administration: t("subjects.publicAdminShort"),
   }), [t]);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (signal?: AbortSignal) => {
     try {
-      const userRes = await fetch("/api/user-info");
+      const userRes = await fetch("/api/user-info", { signal });
       const userData = await userRes.json();
       const orgId = userData.profile?.organization_id;
       const roles: string[] = userData.roles ?? [];
@@ -123,11 +133,12 @@ export default function SubjectsPage() {
       if (searchText) params.set("search", searchText);
       if (tagFilter !== "all") params.set("tagId", tagFilter);
 
-      const res = await fetch(`/api/subjects?${params}`);
+      const res = await fetch(`/api/subjects?${params}`, { signal });
       const data = await res.json();
       setSubjects(data.subjects ?? []);
       setTags(data.tags ?? []);
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       toast.error("Errore nel caricamento dei dati");
     } finally {
       setLoading(false);
@@ -136,7 +147,9 @@ export default function SubjectsPage() {
   }, [typeFilter, tagFilter, searchText]);
 
   useEffect(() => {
-    loadData();
+    const controller = new AbortController();
+    loadData(controller.signal);
+    return () => controller.abort();
   }, [loadData]);
 
   const handleToggle = async (subject: SubjectWithDetails) => {
@@ -164,6 +177,42 @@ export default function SubjectsPage() {
     }
   };
 
+  const openNewForm = () => {
+    setFormSubject(null);
+    setFormDialogOpen(true);
+  };
+
+  const openEditForm = async (subject: SubjectWithDetails) => {
+    setFormLoading(true);
+    setFormDialogOpen(true);
+    try {
+      const res = await fetch(`/api/subjects/${subject.id}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFormSubject(data.subject);
+      } else {
+        toast.error(t("subjects.subjectNotFound"));
+        setFormDialogOpen(false);
+      }
+    } catch {
+      toast.error(t("subjects.loadError"));
+      setFormDialogOpen(false);
+    } finally {
+      setFormLoading(false);
+    }
+  };
+
+  const handleFormSuccess = () => {
+    setFormDialogOpen(false);
+    setFormSubject(null);
+    loadData();
+  };
+
+  const handleFormClose = () => {
+    setFormDialogOpen(false);
+    setFormSubject(null);
+  };
+
   const columnDefs = useMemo<ColDef<SubjectWithDetails>[]>(
     () => [
       {
@@ -174,18 +223,37 @@ export default function SubjectsPage() {
         minWidth: 180,
       },
       {
+        headerName: "C.F. / P.IVA",
+        valueGetter: (params) => {
+          if (!params.data) return "";
+          return params.data.type === "person"
+            ? params.data.tax_code ?? ""
+            : params.data.vat_number ?? "";
+        },
+        filter: "agTextColumnFilter",
+        minWidth: 160,
+      },
+      {
         headerName: t("subjects.type"),
         field: "type",
         filter: "agTextColumnFilter",
-        minWidth: 130,
+        minWidth: 80,
+        maxWidth: 100,
         cellRenderer: (params: ICellRendererParams<SubjectWithDetails>) => {
           if (!params.data) return null;
+          const Icon = TYPE_ICONS[params.data.type];
+          const label = TYPE_LABELS[params.data.type];
           return (
-            <Badge
-              variant={TYPE_COLORS[params.data.type] as "default" | "secondary" | "outline" | "destructive"}
-            >
-              {TYPE_LABELS[params.data.type]}
-            </Badge>
+            <div className="flex items-center justify-center h-full">
+              <Tooltip>
+                <TooltipTrigger render={
+                  <span className="inline-flex items-center justify-center">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </span>
+                } />
+                <TooltipContent>{label}</TooltipContent>
+              </Tooltip>
+            </div>
           );
         },
         valueFormatter: (params) =>
@@ -247,12 +315,12 @@ export default function SubjectsPage() {
       ...(canWrite
         ? [
             {
-              headerName: t("common.actions"),
+              headerName: t("common.active"),
               sortable: false,
               filter: false,
               resizable: false,
               floatingFilter: false,
-              minWidth: 200,
+              minWidth: 80,
               cellRenderer: (
                 params: ICellRendererParams<SubjectWithDetails>
               ) => {
@@ -260,14 +328,6 @@ export default function SubjectsPage() {
                 const s = params.data;
                 return (
                   <div className="flex items-center gap-1 h-full">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => router.push(`/subjects/${s.id}/edit`)}
-                    >
-                      <Pencil className="h-3 w-3 mr-1" />
-                      {t("common.edit")}
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -279,16 +339,6 @@ export default function SubjectsPage() {
                         <RefreshCw className="h-3 w-3" />
                       )}
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setDeleteTarget(s);
-                        setDeleteDialogOpen(true);
-                      }}
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
                   </div>
                 );
               },
@@ -296,7 +346,7 @@ export default function SubjectsPage() {
           ]
         : []),
     ],
-    [canWrite, router, t, locale, TYPE_LABELS]
+    [canWrite, t, locale, TYPE_LABELS]
   );
 
   if (loading) {
@@ -312,19 +362,13 @@ export default function SubjectsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col flex-1 min-h-0 gap-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" />
           {t("subjects.title")}
         </h1>
-        {canWrite && (
-          <Button onClick={() => router.push("/subjects/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("subjects.newSubject")}
-          </Button>
-        )}
       </div>
 
       {/* Filters */}
@@ -383,16 +427,21 @@ export default function SubjectsPage() {
       <DataGrid
         rowData={subjects}
         columnDefs={columnDefs}
+        onCreate={canWrite ? openNewForm : undefined}
+        onEdit={canWrite ? (s) => openEditForm(s) : undefined}
+        onDelete={canWrite ? (selected) => {
+          setDeleteTarget(selected[0]);
+          setDeleteDialogOpen(true);
+        } : undefined}
         exportFileName="soggetti"
         renderMobileCard={(subject) => (
           <div key={subject.id} className="rounded-lg border p-4 space-y-3">
             <div className="flex items-center justify-between">
               <span className="font-medium">{getSubjectName(subject)}</span>
-              <Badge
-                variant={TYPE_COLORS[subject.type] as "default" | "secondary" | "outline" | "destructive"}
-              >
+              <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                {(() => { const Icon = TYPE_ICONS[subject.type]; return <Icon className="h-4 w-4" />; })()}
                 {TYPE_LABELS[subject.type]}
-              </Badge>
+              </span>
             </div>
             {getPrimaryAddress(subject) && (
               <div className="text-sm text-muted-foreground">
@@ -434,7 +483,7 @@ export default function SubjectsPage() {
                   variant="outline"
                   size="sm"
                   className="flex-1"
-                  onClick={() => router.push(`/subjects/${subject.id}/edit`)}
+                  onClick={() => openEditForm(subject)}
                 >
                   <Pencil className="h-3 w-3 mr-1" />
                   {t("common.edit")}
@@ -465,6 +514,46 @@ export default function SubjectsPage() {
           </div>
         )}
       />
+
+      {/* Form dialog (new / edit) */}
+      <Dialog
+        open={formDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) handleFormClose();
+        }}
+      >
+        <DialogContent
+          className="sm:max-w-4xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto"
+          showCloseButton
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {formSubject
+                ? t("subjects.editSubject")
+                : t("subjects.newSubject")}
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              {formSubject
+                ? t("subjects.editSubject")
+                : t("subjects.newSubject")}
+            </DialogDescription>
+          </DialogHeader>
+          {formLoading ? (
+            <p className="text-muted-foreground text-center py-8">
+              {t("common.loading")}
+            </p>
+          ) : (
+            <SubjectForm
+              key={formSubject?.id ?? "new"}
+              initialData={formSubject ?? undefined}
+              tags={tags}
+              isDialog
+              onSuccess={handleFormSuccess}
+              onClose={handleFormClose}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete confirmation dialog */}
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

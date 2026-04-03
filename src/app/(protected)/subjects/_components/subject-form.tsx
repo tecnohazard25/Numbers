@@ -25,12 +25,17 @@ import {
   Trash2,
   Save,
   ArrowLeft,
+  Building2,
   Calculator,
   CheckCircle2,
-  XCircle,
+  Landmark,
   Loader2,
+  Store,
+  User,
   X,
+  XCircle,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { createSubjectAction, updateSubjectAction } from "@/app/actions/subjects";
 import type { SubjectInput, SubjectAddressInput, SubjectContactInput } from "@/app/actions/subjects";
 import { verifyVatAction } from "@/app/actions/vies";
@@ -44,6 +49,13 @@ import type {
   SubjectWithDetails,
   Tag,
 } from "@/types/supabase";
+
+const TYPE_ICONS: Record<SubjectType, React.ComponentType<{ className?: string }>> = {
+  person: User,
+  company: Building2,
+  sole_trader: Store,
+  public_administration: Landmark,
+};
 
 const TAG_COLORS = [
   "#6366f1",
@@ -67,9 +79,12 @@ interface ContactFormItem extends SubjectContactInput {
 interface SubjectFormProps {
   initialData?: SubjectWithDetails;
   tags: Tag[];
+  isDialog?: boolean;
+  onSuccess?: () => void;
+  onClose?: () => void;
 }
 
-export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps) {
+export function SubjectForm({ initialData, tags: initialTags, isDialog, onSuccess, onClose }: SubjectFormProps) {
   const router = useRouter();
   const { t } = useTranslation();
   const isEdit = !!initialData;
@@ -407,25 +422,33 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       toast.error(result.error);
     } else {
       toast.success(isEdit ? t("subjects.updated") : t("subjects.created"));
-      router.push("/subjects");
+      if (onSuccess) {
+        onSuccess();
+      } else {
+        router.push("/subjects");
+      }
     }
     setIsSubmitting(false);
   };
 
   const isPerson = type === "person";
 
+  const goBack = onClose ?? (() => router.push("/subjects"));
+
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className={cn("space-y-6", !isDialog && "max-w-4xl")}>
       {/* Header */}
-      <div className="flex items-center gap-4">
-        <Button variant="outline" size="sm" onClick={() => router.push("/subjects")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          {t("common.back")}
-        </Button>
-        <h1 className="text-2xl font-bold">
-          {isEdit ? t("subjects.editSubject") : t("subjects.newSubject")}
-        </h1>
-      </div>
+      {!isDialog && (
+        <div className="flex items-center gap-4">
+          <Button variant="outline" size="sm" onClick={goBack}>
+            <ArrowLeft className="h-4 w-4 mr-1" />
+            {t("common.back")}
+          </Button>
+          <h1 className="text-2xl font-bold">
+            {isEdit ? t("subjects.editSubject") : t("subjects.newSubject")}
+          </h1>
+        </div>
+      )}
 
       {/* Section 1: Type */}
       <Card>
@@ -434,17 +457,21 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(Object.keys(SUBJECT_TYPE_LABELS) as SubjectType[]).map((st) => (
-              <Button
-                key={st}
-                variant={type === st ? "default" : "outline"}
-                size="sm"
-                className="w-full"
-                onClick={() => setType(st)}
-              >
-                {SUBJECT_TYPE_LABELS[st]}
-              </Button>
-            ))}
+            {(Object.keys(SUBJECT_TYPE_LABELS) as SubjectType[]).map((st) => {
+              const Icon = TYPE_ICONS[st];
+              return (
+                <Button
+                  key={st}
+                  variant={type === st ? "default" : "outline"}
+                  size="sm"
+                  className="w-full"
+                  onClick={() => setType(st)}
+                >
+                  <Icon className="h-4 w-4 mr-1.5" />
+                  {SUBJECT_TYPE_LABELS[st]}
+                </Button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>
@@ -964,7 +991,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
 
       {/* Footer */}
       <div className="flex justify-end gap-3 pb-8">
-        <Button variant="outline" onClick={() => router.push("/subjects")}>
+        <Button variant="outline" onClick={goBack}>
           {t("common.cancel")}
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>

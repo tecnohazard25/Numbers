@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { UsersPageClient } from "./users-page-client";
 
@@ -9,6 +9,13 @@ export default function SuperadminUsersPage() {
   const [users, setUsers] = useState([]);
   const [organizations, setOrganizations] = useState([]);
   const [authorized, setAuthorized] = useState(false);
+
+  const loadData = useCallback(async () => {
+    const dataRes = await fetch("/api/users");
+    const data = await dataRes.json();
+    setUsers(data.users ?? []);
+    setOrganizations(data.organizations ?? []);
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -19,13 +26,10 @@ export default function SuperadminUsersPage() {
         return;
       }
       setAuthorized(true);
-      const dataRes = await fetch("/api/users");
-      const data = await dataRes.json();
-      setUsers(data.users ?? []);
-      setOrganizations(data.organizations ?? []);
+      await loadData();
     }
     init();
-  }, [router]);
+  }, [router, loadData]);
 
   if (!authorized) return null;
 
@@ -34,6 +38,7 @@ export default function SuperadminUsersPage() {
       users={users}
       organizations={organizations}
       isSuperadmin={true}
+      onRefresh={loadData}
     />
   );
 }

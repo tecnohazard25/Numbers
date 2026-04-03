@@ -1,12 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Organization } from "@/types/supabase";
 import { OrganizationsTable } from "./organizations-table";
-import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { Building2, Plus } from "lucide-react";
+import { Building2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 
 export default function SuperadminPage() {
@@ -14,6 +12,12 @@ export default function SuperadminPage() {
   const { t } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [authorized, setAuthorized] = useState(false);
+
+  const loadData = useCallback(async () => {
+    const orgRes = await fetch("/api/organizations");
+    const data = await orgRes.json();
+    setOrganizations(data.organizations ?? []);
+  }, []);
 
   useEffect(() => {
     async function init() {
@@ -24,30 +28,26 @@ export default function SuperadminPage() {
         return;
       }
       setAuthorized(true);
-      const orgRes = await fetch("/api/organizations");
-      const data = await orgRes.json();
-      setOrganizations(data.organizations ?? []);
+      await loadData();
     }
     init();
-  }, [router]);
+  }, [router, loadData]);
 
   if (!authorized) return null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="flex flex-col flex-1 min-h-0 gap-6">
+      <div className="flex items-center gap-4">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className="h-6 w-6" />
           {t("orgs.title")}
         </h1>
-        <Link href="/superadmin/organizations/new">
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            {t("orgs.newOrg")}
-          </Button>
-        </Link>
       </div>
-      <OrganizationsTable organizations={organizations} />
+      <OrganizationsTable
+        organizations={organizations}
+        onCreate={() => router.push("/superadmin/organizations/new")}
+        onRefresh={loadData}
+      />
     </div>
   );
 }

@@ -14,13 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -31,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { ROLE_LABELS } from "@/lib/roles";
@@ -59,7 +51,7 @@ export default function OrgUsersPage() {
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [deleteUser, setDeleteUser] = useState<User | null>(null);
+  const [deleteUsers, setDeleteUsers] = useState<User[]>([]);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [editFirstName, setEditFirstName] = useState("");
   const [editLastName, setEditLastName] = useState("");
@@ -70,26 +62,42 @@ export default function OrgUsersPage() {
 
   async function loadData(oid?: string) {
     const id = oid ?? orgId;
-    if (!id) return;
-    const usersRes = await fetch(`/api/users?orgId=${id}`);
-    const data = await usersRes.json();
-    setUsers(data.users ?? []);
-    setLoading(false);
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    try {
+      const usersRes = await fetch(`/api/users?orgId=${id}`);
+      const data = await usersRes.json();
+      setUsers(data.users ?? []);
+    } catch (err) {
+      console.error("Error loading users:", err);
+      toast.error(t("common.errorLoading"));
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
     async function init() {
-      const infoRes = await fetch("/api/user-info");
-      const info = await infoRes.json();
-      const roles: string[] = info.roles ?? [];
-      if (!roles.includes("user_manager")) {
-        router.push("/dashboard");
-        return;
-      }
-      const oid = info.profile?.organization_id;
-      if (oid) {
-        setOrgId(oid);
-        loadData(oid);
+      try {
+        const infoRes = await fetch("/api/user-info");
+        const info = await infoRes.json();
+        const roles: string[] = info.roles ?? [];
+        if (!roles.includes("user_manager")) {
+          router.push("/dashboard");
+          return;
+        }
+        const oid = info.profile?.organization_id;
+        if (oid) {
+          setOrgId(oid);
+          await loadData(oid);
+        } else {
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error("Error initializing:", err);
+        setLoading(false);
       }
     }
     init();
@@ -153,17 +161,22 @@ export default function OrgUsersPage() {
   }
 
   async function handleDelete() {
-    if (!deleteUser) return;
+    if (deleteUsers.length === 0) return;
     setIsSubmitting(true);
-    const result = await deleteUserAction(deleteUser.id);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success(t("users.deleted"));
-      loadData();
+    let hasError = false;
+    for (const user of deleteUsers) {
+      const result = await deleteUserAction(user.id);
+      if (result.error) {
+        toast.error(`${user.first_name} ${user.last_name}: ${result.error}`);
+        hasError = true;
+      }
     }
+    if (!hasError) {
+      toast.success(t("users.deleted"));
+    }
+    loadData();
     setIsSubmitting(false);
-    setDeleteUser(null);
+    setDeleteUsers([]);
   }
 
   const columnDefs = useMemo<ColDef<User>[]>(
@@ -197,20 +210,12 @@ export default function OrgUsersPage() {
         filter: false,
         resizable: false,
         floatingFilter: false,
-        minWidth: 250,
+        minWidth: 150,
         cellRenderer: (params: ICellRendererParams<User>) => {
           if (!params.data) return null;
           const user = params.data;
           return (
             <div className="flex items-center gap-2 h-full">
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                } />
-                <TooltipContent>{t("common.edit")}</TooltipContent>
-              </Tooltip>
               <Button
                 variant="outline"
                 size="sm"
@@ -222,18 +227,6 @@ export default function OrgUsersPage() {
                   <><RefreshCw className="h-4 w-4 mr-1" />{t("common.reactivate")}</>
                 )}
               </Button>
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteUser(user)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                } />
-                <TooltipContent>{t("common.delete")}</TooltipContent>
-              </Tooltip>
             </div>
           );
         },
@@ -252,108 +245,106 @@ export default function OrgUsersPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>{t("users.title")}</CardTitle>
-              <CardDescription>
-                {users.length} {t("users.usersInOrg")}
-              </CardDescription>
+    <div className="flex flex-col flex-1 min-h-0 gap-6">
+      {/* Header */}
+      <div className="flex items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">{t("users.title")}</h1>
+          <p className="text-sm text-muted-foreground">
+            {users.length} {t("users.usersInOrg")}
+          </p>
+        </div>
+      </div>
+
+      {/* Data Grid */}
+      <DataGrid
+        rowData={users}
+        columnDefs={columnDefs}
+        exportFileName="utenti"
+        onCreate={() => setCreateDialogOpen(true)}
+        onEdit={(user) => openEditDialog(user)}
+        onDelete={(selected) => setDeleteUsers(selected)}
+        renderMobileCard={(user) => (
+          <div key={user.id} className="rounded-lg border p-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-medium">
+                {user.first_name} {user.last_name}
+              </span>
+              <Badge variant={user.is_active ? "default" : "secondary"}>
+                {user.is_active ? t("common.active") : t("common.inactive")}
+              </Badge>
             </div>
-            <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-              <DialogTrigger render={<Button />}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t("users.newUser")}
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("users.createNewUser")}</DialogTitle>
-                  <DialogDescription>
-                    {t("users.userWillReceiveInvite")}
-                  </DialogDescription>
-                </DialogHeader>
-                <form action={handleCreateUser} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
-                      <Input id="firstName" name="firstName" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
-                      <Input id="lastName" name="lastName" required />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">{t("common.email")}</Label>
-                    <Input id="email" name="email" type="email" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("common.roles")}</Label>
-                    <div className="space-y-2">
-                      {AVAILABLE_ROLES.map((role) => (
-                        <label key={role.name} className="flex items-center gap-2 text-sm">
-                          <input type="checkbox" name="roles" value={role.name} className="rounded" />
-                          {t(role.label)}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                      <X className="h-4 w-4 mr-1" />
-                      {t("common.cancel")}
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      {isSubmitting ? t("common.creating") : t("users.createUser")}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
+            <div className="text-sm text-muted-foreground">{user.email}</div>
+            <div className="flex gap-1 flex-wrap">
+              {user.user_roles.map((ur) => (
+                <Badge key={ur.roles.name} variant="outline">
+                  {t(ROLE_LABELS[ur.roles.name] ?? ur.roles.name)}
+                </Badge>
+              ))}
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
+                <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleToggle(user.id, user.is_active)}>
+                {user.is_active ? t("common.deactivate") : t("common.reactivate")}
+              </Button>
+              <Button variant="destructive" size="sm" onClick={() => setDeleteUsers([user])}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
-        </CardHeader>
-        <CardContent>
-          <DataGrid
-            rowData={users}
-            columnDefs={columnDefs}
-            exportFileName="utenti"
-            renderMobileCard={(user) => (
-              <div key={user.id} className="rounded-lg border p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium">
-                    {user.first_name} {user.last_name}
-                  </span>
-                  <Badge variant={user.is_active ? "default" : "secondary"}>
-                    {user.is_active ? t("common.active") : t("common.inactive")}
-                  </Badge>
-                </div>
-                <div className="text-sm text-muted-foreground">{user.email}</div>
-                <div className="flex gap-1 flex-wrap">
-                  {user.user_roles.map((ur) => (
-                    <Badge key={ur.roles.name} variant="outline">
-                      {t(ROLE_LABELS[ur.roles.name] ?? ur.roles.name)}
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                    <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
-                  </Button>
-                  <Button variant="outline" size="sm" onClick={() => handleToggle(user.id, user.is_active)}>
-                    {user.is_active ? t("common.deactivate") : t("common.reactivate")}
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => setDeleteUser(user)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
+        )}
+      />
+
+      {/* Create User Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("users.createNewUser")}</DialogTitle>
+            <DialogDescription>
+              {t("users.userWillReceiveInvite")}
+            </DialogDescription>
+          </DialogHeader>
+          <form action={handleCreateUser} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
+                <Input id="firstName" name="firstName" required />
               </div>
-            )}
-          />
-        </CardContent>
-      </Card>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
+                <Input id="lastName" name="lastName" required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t("common.email")}</Label>
+              <Input id="email" name="email" type="email" required />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("common.roles")}</Label>
+              <div className="space-y-2">
+                {AVAILABLE_ROLES.map((role) => (
+                  <label key={role.name} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="roles" value={role.name} className="rounded" />
+                    {t(role.label)}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                <X className="h-4 w-4 mr-1" />
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                {isSubmitting ? t("common.creating") : t("users.createUser")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog
@@ -445,24 +436,31 @@ export default function OrgUsersPage() {
       </Dialog>
 
       {/* Delete User Dialog */}
-      <Dialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
+      <Dialog open={deleteUsers.length > 0} onOpenChange={(open) => !open && setDeleteUsers([])}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("users.confirmDelete")}</DialogTitle>
             <DialogDescription>
-              {t("users.confirmDeleteDesc")}{" "}
-              <strong>{deleteUser?.first_name} {deleteUser?.last_name}</strong>?
-              {" "}{t("users.irreversible")}
+              {deleteUsers.length === 1 ? (
+                <>{t("users.confirmDeleteDesc")}{" "}
+                <strong>{deleteUsers[0]?.first_name} {deleteUsers[0]?.last_name}</strong>?
+                {" "}{t("users.irreversible")}</>
+              ) : (
+                <>{t("users.confirmDeleteDesc")}{" "}
+                <strong>{deleteUsers.length}</strong> {t("users.usersQuestion")}
+                {" "}{t("users.irreversible")}</>
+              )}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUser(null)}>
+            <Button variant="outline" onClick={() => setDeleteUsers([])}>
               <X className="h-4 w-4 mr-1" />
               {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
               <Trash2 className="h-4 w-4 mr-1" />
               {isSubmitting ? t("common.deleting") : t("common.delete")}
+              {deleteUsers.length > 1 && ` (${deleteUsers.length})`}
             </Button>
           </DialogFooter>
         </DialogContent>

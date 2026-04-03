@@ -12,11 +12,11 @@ export function AppLayout({ children, roles, userName }: AppLayoutProps) {
   return (
     <SidebarProvider>
       <AppSidebar roles={roles} userName={userName} />
-      <main className="flex-1 min-h-screen">
+      <main className="flex-1 flex flex-col min-h-screen">
         <div className="flex items-center p-4 border-b md:hidden">
           <SidebarTrigger />
         </div>
-        <div className="p-4 md:p-6 lg:p-8">{children}</div>
+        <div className="p-4 md:p-6 lg:p-8 flex-1 flex flex-col min-h-0">{children}</div>
       </main>
       <Toaster />
     </SidebarProvider>

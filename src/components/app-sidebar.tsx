@@ -2,6 +2,7 @@
 
 import {
   Building2,
+  CircleUserRound,
   Contact2,
   Settings,
   Users,
@@ -180,7 +181,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
           className="flex items-center gap-2 text-sm text-muted-foreground mb-2 truncate hover:text-foreground transition-colors"
           title={t("sidebar.changePassword")}
         >
-          <Settings className="h-4 w-4 shrink-0" />
+          <CircleUserRound className="h-4 w-4 shrink-0" />
           <span className="truncate">{userName}</span>
         </Link>
         <form action={logoutAction}>

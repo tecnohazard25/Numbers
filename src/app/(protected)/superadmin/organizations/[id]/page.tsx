@@ -293,18 +293,6 @@ export default function OrganizationDetailPage() {
           const user = params.data;
           return (
             <div className="flex items-center gap-2 h-full">
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(user)}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                } />
-                <TooltipContent>{t("common.edit")}</TooltipContent>
-              </Tooltip>
               <Button
                 variant="secondary"
                 size="sm"
@@ -324,18 +312,6 @@ export default function OrganizationDetailPage() {
                   <><RefreshCw className="h-4 w-4 mr-1" />{t("common.reactivate")}</>
                 )}
               </Button>
-              <Tooltip>
-                <TooltipTrigger render={
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => setDeleteUser(user)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                } />
-                <TooltipContent>{t("common.delete")}</TooltipContent>
-              </Tooltip>
             </div>
           );
         },
@@ -401,86 +377,19 @@ export default function OrganizationDetailPage() {
 
       <Card>
         <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <CardTitle>{t("users.title")}</CardTitle>
-              <CardDescription>
-                {users.length} {t("users.usersInThisOrg")}
-              </CardDescription>
-            </div>
-            <Dialog
-              open={createDialogOpen}
-              onOpenChange={setCreateDialogOpen}
-            >
-              <DialogTrigger render={<Button />}>
-                <Plus className="h-4 w-4 mr-2" />
-                {t("users.newUser")}
-              </DialogTrigger>
-              <DialogContent>
-                <DialogHeader>
-                  <DialogTitle>{t("users.createNewUser")}</DialogTitle>
-                  <DialogDescription>
-                    {t("users.userWillReceiveInvite")}
-                  </DialogDescription>
-                </DialogHeader>
-                <form action={handleCreateUser} className="space-y-4">
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
-                      <Input id="firstName" name="firstName" required />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
-                      <Input id="lastName" name="lastName" required />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email">{t("common.email")}</Label>
-                    <Input id="email" name="email" type="email" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{t("common.roles")}</Label>
-                    <div className="space-y-2">
-                      {AVAILABLE_ROLES.map((role) => (
-                        <label
-                          key={role.name}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <input
-                            type="checkbox"
-                            name="roles"
-                            value={role.name}
-                            className="rounded"
-                          />
-                          {t(role.label)}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setCreateDialogOpen(false)}
-                    >
-                      <X className="h-4 w-4 mr-1" />
-                      {t("common.cancel")}
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      <UserPlus className="h-4 w-4 mr-1" />
-                      {isSubmitting ? t("common.creating") : t("users.createUser")}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          </div>
+          <CardTitle>{t("users.title")}</CardTitle>
+          <CardDescription>
+            {users.length} {t("users.usersInThisOrg")}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <DataGrid
             rowData={users}
             columnDefs={columnDefs}
             exportFileName={`utenti-${org.slug}`}
+            onCreate={() => setCreateDialogOpen(true)}
+            onEdit={(user) => openEditDialog(user)}
+            onDelete={(selected) => setDeleteUser(selected[0])}
             renderMobileCard={(user) => (
               <div key={user.id} className="rounded-lg border p-4 space-y-3">
                 <div className="flex items-center justify-between">
@@ -518,6 +427,55 @@ export default function OrganizationDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {/* Create User Dialog */}
+      <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("users.createNewUser")}</DialogTitle>
+            <DialogDescription>
+              {t("users.userWillReceiveInvite")}
+            </DialogDescription>
+          </DialogHeader>
+          <form action={handleCreateUser} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
+                <Input id="firstName" name="firstName" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
+                <Input id="lastName" name="lastName" required />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">{t("common.email")}</Label>
+              <Input id="email" name="email" type="email" required />
+            </div>
+            <div className="space-y-2">
+              <Label>{t("common.roles")}</Label>
+              <div className="space-y-2">
+                {AVAILABLE_ROLES.map((role) => (
+                  <label key={role.name} className="flex items-center gap-2 text-sm">
+                    <input type="checkbox" name="roles" value={role.name} className="rounded" />
+                    {t(role.label)}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                <X className="h-4 w-4 mr-1" />
+                {t("common.cancel")}
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                <UserPlus className="h-4 w-4 mr-1" />
+                {isSubmitting ? t("common.creating") : t("users.createUser")}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog

@@ -17,6 +17,15 @@
     "noData": "Nessun dato da mostrare",
     "search": "Cerca",
     "exportExcel": "Esporta Excel",
+    "columns": "Colonne",
+    "autosizeColumns": "Adatta",
+    "groupBy": "Raggruppa",
+    "none": "Nessuno",
+    "saveLayout": "Salva layout",
+    "resetLayout": "Ripristina",
+    "layoutName": "Nome layout",
+    "options": "Opzioni",
+    "rows": "righe",
     "new": "Nuovo",
     "close": "Chiudi",
     "update": "Aggiorna",
@@ -236,7 +245,8 @@
     "impersonate": "Impersona",
     "restoring": "Ripristino...",
     "selectOrganization": "Seleziona organizzazione",
-    "organization": "Organizzazione"
+    "organization": "Organizzazione",
+    "usersQuestion": "utenti?"
   },
   "orgs": {
     "title": "Organizzazioni",
@@ -265,7 +275,8 @@
     "orgNotFound": "Organizzazione non trovata",
     "backToOrganizations": "Torna alle organizzazioni",
     "settingsSaved": "Impostazioni salvate",
-    "createOrganization": "Crea Organizzazione"
+    "createOrganization": "Crea Organizzazione",
+    "organizationsQuestion": "organizzazioni?"
   },
   "profile": {
     "theme": "Tema",

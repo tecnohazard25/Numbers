@@ -17,6 +17,15 @@
     "noData": "No data to display",
     "search": "Search",
     "exportExcel": "Export Excel",
+    "columns": "Columns",
+    "autosizeColumns": "Autosize",
+    "groupBy": "Group by",
+    "none": "None",
+    "saveLayout": "Save layout",
+    "resetLayout": "Reset",
+    "layoutName": "Layout name",
+    "options": "Options",
+    "rows": "rows",
     "new": "New",
     "close": "Close",
     "update": "Update",
@@ -236,7 +245,8 @@
     "impersonate": "Impersonate",
     "restoring": "Restoring...",
     "selectOrganization": "Select organization",
-    "organization": "Organization"
+    "organization": "Organization",
+    "usersQuestion": "users?"
   },
   "orgs": {
     "title": "Organizations",
@@ -265,7 +275,8 @@
     "orgNotFound": "Organization not found",
     "backToOrganizations": "Back to organizations",
     "settingsSaved": "Settings saved",
-    "createOrganization": "Create Organization"
+    "createOrganization": "Create Organization",
+    "organizationsQuestion": "organizations?"
   },
   "profile": {
     "theme": "Theme",
