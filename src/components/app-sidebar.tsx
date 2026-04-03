@@ -4,12 +4,14 @@ import {
   Building2,
   CircleUserRound,
   Contact2,
+  EyeOff,
   Settings,
   Users,
   LayoutDashboard,
   LogOut,
   Shield,
 } from "lucide-react";
+import { useState } from "react";
 import {
   Sidebar,
   SidebarContent,
@@ -25,6 +27,7 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/auth";
+import type { ImpersonationInfo } from "@/components/app-layout";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslation } from "@/lib/i18n/context";
@@ -38,11 +41,30 @@ type NavItem = {
 interface AppSidebarProps {
   roles: string[];
   userName: string;
+  impersonating?: ImpersonationInfo | null;
 }
 
-export function AppSidebar({ roles, userName }: AppSidebarProps) {
+export function AppSidebar({ roles, userName, impersonating }: AppSidebarProps) {
   const pathname = usePathname();
   const { t } = useTranslation();
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  async function handleStopImpersonation() {
+    setIsRestoring(true);
+    const res = await fetch("/api/impersonate", { method: "DELETE" });
+    const data = await res.json();
+    if (data.error) {
+      setIsRestoring(false);
+      return;
+    }
+    const { createClient } = await import("@/lib/supabase/client");
+    const supabase = createClient();
+    await supabase.auth.verifyOtp({
+      token_hash: data.tokenHash,
+      type: "magiclink",
+    });
+    window.location.href = "/superadmin";
+  }
 
   const superadminItems: NavItem[] = [
     { title: t("sidebar.organizations"), url: "/superadmin", icon: Building2 },
@@ -184,18 +206,33 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
           <CircleUserRound className="h-4 w-4 shrink-0" />
           <span className="truncate">{userName}</span>
         </Link>
-        <form action={logoutAction}>
+        {impersonating ? (
           <button
-            type="submit"
+            type="button"
             className={cn(
               buttonVariants({ variant: "outline", size: "sm" }),
-              "w-full"
+              "w-full border-amber-600 text-amber-600 hover:bg-amber-600 hover:text-white"
             )}
+            onClick={handleStopImpersonation}
+            disabled={isRestoring}
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            {t("auth.logout")}
+            <EyeOff className="h-4 w-4 mr-2" />
+            {isRestoring ? t("impersonation.restoring") : t("impersonation.backToSuperadmin")}
           </button>
-        </form>
+        ) : (
+          <form action={logoutAction}>
+            <button
+              type="submit"
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "w-full"
+              )}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              {t("auth.logout")}
+            </button>
+          </form>
+        )}
       </SidebarFooter>
     </Sidebar>
   );

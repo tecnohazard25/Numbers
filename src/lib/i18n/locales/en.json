@@ -26,6 +26,8 @@
     "layoutName": "Layout name",
     "options": "Options",
     "rows": "rows",
+    "setAsDefault": "Set as default",
+    "removeDefault": "Remove default",
     "new": "New",
     "close": "Close",
     "update": "Update",
@@ -191,7 +193,23 @@
     "type": "Type",
     "address": "Address",
     "contactsColumn": "Contacts",
-    "impersonationError": "Impersonation error: "
+    "impersonationError": "Impersonation error: ",
+    "duplicateTaxCode": "A subject with this Tax Code already exists: {name}",
+    "duplicateVatNumber": "A subject with this VAT Number already exists: {name}",
+    "similarSubjectsFound": "Similar subjects found",
+    "similarSubjectEntry": "{name} (TC: {taxCode}, VAT: {vatNumber})",
+    "findSimilar": "Similar subjects",
+    "similarSubjectsTitle": "Similar subjects",
+    "similarSubjectsDesc": "Select the subject to keep (master) for each group and merge the duplicates.",
+    "noSimilarFound": "No similar subjects found",
+    "merge": "Merge",
+    "mergeAll": "Merge all",
+    "mergeSuccess": "Subjects merged successfully",
+    "master": "Master",
+    "sameTC": "Same Tax Code",
+    "sameVAT": "Same VAT Number",
+    "sameName": "Same name",
+    "subjectsCount": "subjects"
   },
   "settings": {
     "title": "Settings",
@@ -219,6 +237,23 @@
       "none": "None",
       "codePlaceholder": "e.g. 22, N1, N2.1...",
       "descriptionPlaceholder": "e.g. VAT 22% - Standard rate"
+    },
+    "tags": {
+      "title": "Tags",
+      "description": "Manage tags to categorize subjects",
+      "newTag": "New Tag",
+      "editTag": "Edit Tag",
+      "color": "Color",
+      "usageCount": "Usage",
+      "subject": "subject",
+      "subjects": "subjects",
+      "preview": "Preview",
+      "created": "Tag created",
+      "updated": "Tag updated",
+      "deleted": "Tag deleted",
+      "confirmDelete": "Confirm Deletion",
+      "confirmDeleteDesc": "Are you sure you want to delete the tag",
+      "confirmDeleteInUse": "This tag is used by {count} subjects and will be removed from all of them."
     }
   },
   "users": {
@@ -235,8 +270,8 @@
     "confirmDelete": "Confirm deletion",
     "confirmDeleteDesc": "Are you sure you want to delete user {name}? This action is irreversible.",
     "irreversible": "This action is irreversible.",
-    "usersInOrg": "{count} users in your organization",
-    "usersInThisOrg": "{count} users in this organization",
+    "usersInOrg": "users in your organization",
+    "usersInThisOrg": "users in this organization",
     "userWillReceiveInvite": "The user will receive an email invitation",
     "passwordExpiry": "Password expiry",
     "setNewPassword": "Set new password",
@@ -246,7 +281,10 @@
     "restoring": "Restoring...",
     "selectOrganization": "Select organization",
     "organization": "Organization",
-    "usersQuestion": "users?"
+    "usersQuestion": "users?",
+    "initialPassword": "Initial password",
+    "generatePassword": "Generate",
+    "passwordExpiresOnLogin": "The user will be required to change the password on first login."
   },
   "orgs": {
     "title": "Organizations",

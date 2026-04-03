@@ -31,7 +31,8 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Ban, Plus, RefreshCw, Save, Trash2, Users, UserPlus, X } from "lucide-react";
+import { Ban, KeyRound, Plus, RefreshCw, Save, Trash2, Users, UserPlus, X } from "lucide-react";
+import { generatePassword } from "@/lib/password";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { ROLE_LABELS } from "@/lib/roles";
 
@@ -79,9 +80,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin, onRefresh 
 
   const availableRoles = isSuperadmin
     ? ALL_ROLES
-    : ALL_ROLES.filter(
-        (r) => r.name !== "superadmin" && r.name !== "user_manager"
-      );
+    : ALL_ROLES.filter((r) => r.name !== "superadmin");
 
   function openEditDialog(user: User) {
     setEditUser(user);
@@ -339,6 +338,21 @@ export function UsersPageClient({ users, organizations, isSuperadmin, onRefresh 
               </div>
             )}
             <div className="space-y-2">
+              <Label htmlFor="sa-password">{t("users.initialPassword")}</Label>
+              <div className="flex gap-2">
+                <Input id="sa-password" name="password" type="text" required autoComplete="off" />
+                <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => {
+                  const el = document.getElementById("sa-password") as HTMLInputElement;
+                  if (el) { el.value = generatePassword(); }
+                }}>
+                  <KeyRound className="h-4 w-4 mr-1" />
+                  {t("users.generatePassword")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("auth.passwordRequirements")}</p>
+              <p className="text-xs text-muted-foreground">{t("users.passwordExpiresOnLogin")}</p>
+            </div>
+            <div className="space-y-2">
               <Label>{t("common.roles")}</Label>
               <div className="space-y-2">
                 {availableRoles.map((role) => (
@@ -349,16 +363,16 @@ export function UsersPageClient({ users, organizations, isSuperadmin, onRefresh 
                 ))}
               </div>
             </div>
-            <div className="flex justify-end gap-3">
-              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
-                <X className="h-4 w-4 mr-1" />
-                {t("common.cancel")}
-              </Button>
+            <DialogFooter>
               <Button type="submit" disabled={isLoading}>
                 <UserPlus className="h-4 w-4 mr-1" />
                 {isLoading ? t("common.creating") : t("users.createUser")}
               </Button>
-            </div>
+              <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                <X className="h-4 w-4 mr-1" />
+                {t("common.cancel")}
+              </Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
@@ -440,13 +454,13 @@ export function UsersPageClient({ users, organizations, isSuperadmin, onRefresh 
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>
-              <X className="h-4 w-4 mr-1" />
-              {t("common.cancel")}
-            </Button>
             <Button onClick={handleSaveEdit} disabled={isLoading}>
               <Save className="h-4 w-4 mr-1" />
               {isLoading ? t("common.saving") : t("common.save")}
+            </Button>
+            <Button variant="outline" onClick={() => setEditUser(null)}>
+              <X className="h-4 w-4 mr-1" />
+              {t("common.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -470,14 +484,14 @@ export function UsersPageClient({ users, organizations, isSuperadmin, onRefresh 
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUsers([])}>
-              <X className="h-4 w-4 mr-1" />
-              {t("common.cancel")}
-            </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isLoading}>
               <Trash2 className="h-4 w-4 mr-1" />
               {isLoading ? t("common.deleting") : t("common.delete")}
               {deleteUsers.length > 1 && ` (${deleteUsers.length})`}
+            </Button>
+            <Button variant="outline" onClick={() => setDeleteUsers([])}>
+              <X className="h-4 w-4 mr-1" />
+              {t("common.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>

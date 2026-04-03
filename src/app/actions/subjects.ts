@@ -69,6 +69,32 @@ export async function createSubjectAction(data: SubjectInput) {
 
   const admin = createAdminClient();
 
+  // Check for duplicate tax_code
+  if (data.tax_code) {
+    const { data: existing } = await admin
+      .from("subjects")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("tax_code", data.tax_code)
+      .limit(1);
+    if (existing?.length) {
+      return { error: "Esiste già un soggetto con lo stesso Codice Fiscale" };
+    }
+  }
+
+  // Check for duplicate vat_number
+  if (data.vat_number) {
+    const { data: existing } = await admin
+      .from("subjects")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("vat_number", data.vat_number)
+      .limit(1);
+    if (existing?.length) {
+      return { error: "Esiste già un soggetto con la stessa Partita IVA" };
+    }
+  }
+
   const { data: subject, error: subjectError } = await admin
     .from("subjects")
     .insert({
@@ -201,6 +227,34 @@ export async function updateSubjectAction(subjectId: string, data: SubjectInput)
   } else {
     if (!data.business_name) {
       return { error: "Ragione sociale obbligatoria" };
+    }
+  }
+
+  // Check for duplicate tax_code (excluding self)
+  if (data.tax_code) {
+    const { data: dupTax } = await admin
+      .from("subjects")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("tax_code", data.tax_code)
+      .neq("id", subjectId)
+      .limit(1);
+    if (dupTax?.length) {
+      return { error: "Esiste già un soggetto con lo stesso Codice Fiscale" };
+    }
+  }
+
+  // Check for duplicate vat_number (excluding self)
+  if (data.vat_number) {
+    const { data: dupVat } = await admin
+      .from("subjects")
+      .select("id")
+      .eq("organization_id", organizationId)
+      .eq("vat_number", data.vat_number)
+      .neq("id", subjectId)
+      .limit(1);
+    if (dupVat?.length) {
+      return { error: "Esiste già un soggetto con la stessa Partita IVA" };
     }
   }
 
@@ -361,6 +415,92 @@ export async function toggleSubjectAction(subjectId: string, isActive: boolean) 
 
   if (error) {
     return { error: "Errore nell'aggiornamento" };
+  }
+
+  revalidatePath("/subjects");
+  return { success: true };
+}
+
+export async function mergeSubjectsAction(masterId: string, duplicateIds: string[]) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  const { roles, profile } = currentUser;
+  const isOrgAdmin = roles.includes("user_manager");
+  const isSuperadmin = roles.includes("superadmin");
+
+  if (!isSuperadmin && !isOrgAdmin) {
+    return { error: "Non autorizzato" };
+  }
+
+  const admin = createAdminClient();
+
+  // Verify master exists and belongs to org
+  const { data: master } = await admin
+    .from("subjects")
+    .select("id, organization_id")
+    .eq("id", masterId)
+    .single();
+
+  if (!master || master.organization_id !== profile.organization_id) {
+    return { error: "Soggetto master non trovato" };
+  }
+
+  for (const dupId of duplicateIds) {
+    if (dupId === masterId) continue;
+
+    // Verify duplicate belongs to same org
+    const { data: dup } = await admin
+      .from("subjects")
+      .select("id, organization_id")
+      .eq("id", dupId)
+      .single();
+
+    if (!dup || dup.organization_id !== profile.organization_id) continue;
+
+    // Move addresses to master
+    await admin
+      .from("subject_addresses")
+      .update({ subject_id: masterId, is_primary: false })
+      .eq("subject_id", dupId);
+
+    // Move contacts to master
+    await admin
+      .from("subject_contacts")
+      .update({ subject_id: masterId, is_primary: false })
+      .eq("subject_id", dupId);
+
+    // Move tags (skip if already exists on master)
+    const { data: dupTags } = await admin
+      .from("subject_tags")
+      .select("tag_id")
+      .eq("subject_id", dupId);
+
+    const { data: masterTags } = await admin
+      .from("subject_tags")
+      .select("tag_id")
+      .eq("subject_id", masterId);
+
+    const masterTagIds = new Set((masterTags ?? []).map((t) => t.tag_id));
+
+    for (const dt of dupTags ?? []) {
+      if (!masterTagIds.has(dt.tag_id)) {
+        await admin
+          .from("subject_tags")
+          .update({ subject_id: masterId })
+          .eq("subject_id", dupId)
+          .eq("tag_id", dt.tag_id);
+      } else {
+        await admin
+          .from("subject_tags")
+          .delete()
+          .eq("subject_id", dupId)
+          .eq("tag_id", dt.tag_id);
+      }
+    }
+
+    // Delete the duplicate subject
+    await admin.from("subjects").delete().eq("id", dupId);
   }
 
   revalidatePath("/subjects");

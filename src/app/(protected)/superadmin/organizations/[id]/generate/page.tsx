@@ -71,7 +71,7 @@ export default function GenerateDataPage() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => router.push(`/superadmin/organizations/${orgId}`)}
+          onClick={() => router.push("/superadmin")}
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -101,11 +101,19 @@ export default function GenerateDataPage() {
               type="number"
               min={1}
               max={500}
-              value={count}
-              onChange={(e) => setCount(parseInt(e.target.value) || 1)}
+              value={count === 0 ? "" : count}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  setCount(0);
+                } else {
+                  const n = parseInt(val);
+                  if (!isNaN(n)) setCount(Math.min(n, 500));
+                }
+              }}
             />
             <p className="text-xs text-muted-foreground">
-              Massimo 500. Circa 60% persone fisiche, 40% aziende.
+              Massimo 500. Circa 50% persone fisiche, 30% aziende, 10% ditte individuali, 10% enti pubblici.
             </p>
           </div>
 

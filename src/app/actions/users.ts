@@ -15,11 +15,19 @@ export async function createUserAction(formData: FormData) {
   const firstName = formData.get("firstName") as string;
   const lastName = formData.get("lastName") as string;
   const email = formData.get("email") as string;
+  const password = formData.get("password") as string;
   const organizationId = formData.get("organizationId") as string;
   const selectedRoles = formData.getAll("roles") as string[];
 
-  if (!firstName || !lastName || !email) {
-    return { error: "Nome, cognome e email sono obbligatori" };
+  if (!firstName || !lastName || !email || !password) {
+    return { error: "Nome, cognome, email e password sono obbligatori" };
+  }
+
+  // Validate password complexity
+  const { validatePassword } = await import("@/lib/password");
+  const pwError = validatePassword(password);
+  if (pwError) {
+    return { error: pwError };
   }
 
   const isSuperadmin = roles.includes("superadmin");
@@ -45,45 +53,30 @@ export async function createUserAction(formData: FormData) {
 
   const admin = createAdminClient();
 
-  // Create auth user
-  let authUser;
-  let authError;
-
-  if (process.env.NODE_ENV === "development") {
-    const result = await admin.auth.admin.createUser({
-      email,
-      password: "TempPass1!",
-      email_confirm: true,
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName,
-        organization_id: targetOrgId,
-      },
-    });
-    authUser = result.data;
-    authError = result.error;
-  } else {
-    const result = await admin.auth.admin.inviteUserByEmail(email, {
-      data: {
-        first_name: firstName,
-        last_name: lastName,
-        organization_id: targetOrgId,
-      },
-    });
-    authUser = result.data;
-    authError = result.error;
-  }
+  // Create auth user with provided password
+  const { data: authUser, error: authError } = await admin.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: {
+      first_name: firstName,
+      last_name: lastName,
+      organization_id: targetOrgId,
+    },
+  });
 
   if (authError || !authUser.user) {
     return { error: `Errore nella creazione: ${authError?.message}` };
   }
 
   // Upsert profile directly (don't rely on DB trigger)
+  // Set password_expires_at to epoch 0 so user must change password on first login
   await admin.from("profiles").upsert({
     id: authUser.user.id,
     first_name: firstName,
     last_name: lastName,
     organization_id: targetOrgId,
+    password_expires_at: new Date(0).toISOString(),
   });
 
   // Assign roles

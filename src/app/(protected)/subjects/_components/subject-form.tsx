@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
+  AlertTriangle,
   Plus,
   Trash2,
   Save,
@@ -30,6 +31,7 @@ import {
   CheckCircle2,
   Landmark,
   Loader2,
+  OctagonAlert,
   Store,
   User,
   X,
@@ -195,6 +197,56 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Duplicate / similar detection
+  interface DuplicateInfo { id: string; name: string; field: "tax_code" | "vat_number" }
+  interface SimilarInfo { id: string; name: string; taxCode: string | null; vatNumber: string | null }
+  const [duplicates, setDuplicates] = useState<DuplicateInfo[]>([]);
+  const [similarSubjects, setSimilarSubjects] = useState<SimilarInfo[]>([]);
+
+  useEffect(() => {
+    const hasTaxCode = !!taxCode && taxCode.length >= 11;
+    const hasVatNumber = !!vatNumber && vatNumber.length >= 8;
+    const hasName = type === "person"
+      ? !!(firstName && lastName)
+      : !!businessName;
+
+    if (!hasTaxCode && !hasVatNumber && !hasName) {
+      setDuplicates([]);
+      setSimilarSubjects([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        const userRes = await fetch("/api/user-info");
+        const userData = await userRes.json();
+        const orgId = userData.profile?.organization_id;
+        if (!orgId) return;
+
+        const params = new URLSearchParams({ orgId });
+        if (hasTaxCode) params.set("taxCode", taxCode);
+        if (hasVatNumber) params.set("vatNumber", vatNumber);
+        if (type === "person" && firstName && lastName) {
+          params.set("firstName", firstName);
+          params.set("lastName", lastName);
+        }
+        if (type !== "person" && businessName) {
+          params.set("businessName", businessName);
+        }
+        if (initialData?.id) params.set("excludeId", initialData.id);
+
+        const res = await fetch(`/api/subjects/check-duplicates?${params}`);
+        const data = await res.json();
+        setDuplicates(data.duplicates ?? []);
+        setSimilarSubjects(data.similar ?? []);
+      } catch {
+        // ignore
+      }
+    }, 600);
+
+    return () => clearTimeout(timer);
+  }, [taxCode, vatNumber, firstName, lastName, businessName, type, initialData?.id]);
 
   // Google Places
   const { attachAutocomplete, detachAutocomplete, isAvailable: placesAvailable } = useGooglePlaces();
@@ -436,7 +488,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
   const goBack = onClose ?? (() => router.push("/subjects"));
 
   return (
-    <div className={cn("space-y-6", !isDialog && "max-w-4xl")}>
+    <div className={cn("space-y-6", !isDialog && "max-w-4xl overflow-auto flex-1")}>
       {/* Header */}
       {!isDialog && (
         <div className="flex items-center gap-4">
@@ -475,6 +527,40 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
           </div>
         </CardContent>
       </Card>
+
+      {/* Duplicate / similar warnings */}
+      {duplicates.length > 0 && (
+        <div className="rounded-lg border border-destructive bg-destructive/10 p-4 space-y-1">
+          <div className="flex items-center gap-2 font-medium text-destructive">
+            <OctagonAlert className="h-4 w-4 shrink-0" />
+            {duplicates.some((d) => d.field === "tax_code")
+              ? t("subjects.duplicateTaxCode", { name: duplicates.find((d) => d.field === "tax_code")!.name })
+              : t("subjects.duplicateVatNumber", { name: duplicates.find((d) => d.field === "vat_number")!.name })}
+          </div>
+          {duplicates.length > 1 && duplicates.filter((_, i) => i > 0).map((d) => (
+            <div key={d.id} className="text-sm text-destructive ml-6">
+              {d.field === "tax_code"
+                ? t("subjects.duplicateTaxCode", { name: d.name })
+                : t("subjects.duplicateVatNumber", { name: d.name })}
+            </div>
+          ))}
+        </div>
+      )}
+      {similarSubjects.length > 0 && (
+        <div className="rounded-lg border border-amber-500 bg-amber-500/10 p-4 space-y-1">
+          <div className="flex items-center gap-2 font-medium text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            {t("subjects.similarSubjectsFound")}
+          </div>
+          {similarSubjects.map((s) => (
+            <div key={s.id} className="text-sm text-amber-700 dark:text-amber-400 ml-6">
+              {s.name}
+              {s.taxCode && ` — CF: ${s.taxCode}`}
+              {s.vatNumber && ` — P.IVA: ${s.vatNumber}`}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Section 2: Personal/Company data */}
       <Card>
@@ -994,7 +1080,7 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
         <Button variant="outline" onClick={goBack}>
           {t("common.cancel")}
         </Button>
-        <Button onClick={handleSubmit} disabled={isSubmitting}>
+        <Button onClick={handleSubmit} disabled={isSubmitting || duplicates.length > 0}>
           {isSubmitting ? (
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
           ) : (

@@ -24,7 +24,8 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
-import { Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
+import { Ban, KeyRound, Pencil, Plus, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
+import { generatePassword } from "@/lib/password";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { ROLE_LABELS } from "@/lib/roles";
 import { useTranslation } from "@/lib/i18n/context";
@@ -40,6 +41,7 @@ interface User {
 }
 
 const AVAILABLE_ROLES = [
+  { name: "user_manager", label: "roles.userManager" },
   { name: "business_analyst", label: "roles.businessAnalyst" },
   { name: "accountant", label: "roles.accountant" },
 ];
@@ -50,6 +52,7 @@ export default function OrgUsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteUsers, setDeleteUsers] = useState<User[]>([]);
   const [editUser, setEditUser] = useState<User | null>(null);
@@ -88,6 +91,7 @@ export default function OrgUsersPage() {
           router.push("/dashboard");
           return;
         }
+        setCurrentUserId(info.profile?.id ?? null);
         const oid = info.profile?.organization_id;
         if (oid) {
           setOrgId(oid);
@@ -258,7 +262,7 @@ export default function OrgUsersPage() {
 
       {/* Data Grid */}
       <DataGrid
-        rowData={users}
+        rowData={currentUserId ? users.filter((u) => u.id !== currentUserId) : users}
         columnDefs={columnDefs}
         exportFileName="utenti"
         onCreate={() => setCreateDialogOpen(true)}
@@ -322,6 +326,21 @@ export default function OrgUsersPage() {
               <Input id="email" name="email" type="email" required />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="password">{t("users.initialPassword")}</Label>
+              <div className="flex gap-2">
+                <Input id="password" name="password" type="text" required autoComplete="off" />
+                <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={() => {
+                  const el = document.getElementById("password") as HTMLInputElement;
+                  if (el) { el.value = generatePassword(); }
+                }}>
+                  <KeyRound className="h-4 w-4 mr-1" />
+                  {t("users.generatePassword")}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">{t("auth.passwordRequirements")}</p>
+              <p className="text-xs text-muted-foreground">{t("users.passwordExpiresOnLogin")}</p>
+            </div>
+            <div className="space-y-2">
               <Label>{t("common.roles")}</Label>
               <div className="space-y-2">
                 {AVAILABLE_ROLES.map((role) => (
@@ -333,13 +352,13 @@ export default function OrgUsersPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                <X className="h-4 w-4 mr-1" />
-                {t("common.cancel")}
-              </Button>
               <Button type="submit" disabled={isSubmitting}>
                 <UserPlus className="h-4 w-4 mr-1" />
                 {isSubmitting ? t("common.creating") : t("users.createUser")}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                <X className="h-4 w-4 mr-1" />
+                {t("common.cancel")}
               </Button>
             </DialogFooter>
           </form>
@@ -423,13 +442,13 @@ export default function OrgUsersPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditUser(null)}>
-              <X className="h-4 w-4 mr-1" />
-              {t("common.cancel")}
-            </Button>
             <Button onClick={handleSaveEdit} disabled={isSubmitting}>
               <Save className="h-4 w-4 mr-1" />
               {isSubmitting ? t("common.saving") : t("common.save")}
+            </Button>
+            <Button variant="outline" onClick={() => setEditUser(null)}>
+              <X className="h-4 w-4 mr-1" />
+              {t("common.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -453,14 +472,14 @@ export default function OrgUsersPage() {
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteUsers([])}>
-              <X className="h-4 w-4 mr-1" />
-              {t("common.cancel")}
-            </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
               <Trash2 className="h-4 w-4 mr-1" />
               {isSubmitting ? t("common.deleting") : t("common.delete")}
               {deleteUsers.length > 1 && ` (${deleteUsers.length})`}
+            </Button>
+            <Button variant="outline" onClick={() => setDeleteUsers([])}>
+              <X className="h-4 w-4 mr-1" />
+              {t("common.cancel")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -16,15 +16,18 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import {
   Download,
+  ArrowLeftRight,
+  Inbox,
   Pencil,
   Plus,
+  Star,
   Trash2,
   Group,
   X,
   Settings2,
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import { useTranslation } from "@/lib/i18n/context";
 import { getAgGridLocale } from "@/lib/i18n/ag-grid";
 
@@ -46,7 +49,7 @@ const darkTheme = themeQuartz.withParams({
   borderColor: "oklch(0.30 0.015 260)",
   rowHoverColor: "oklch(0.24 0.02 260)",
   selectedRowBackgroundColor: "oklch(0.28 0.02 260)",
-  oddRowBackgroundColor: "oklch(0.18 0.01 260)",
+  oddRowBackgroundColor: "oklch(0.19 0.012 260)",
   headerColumnResizeHandleColor: "oklch(0.55 0.15 250)",
   accentColor: "oklch(0.65 0.18 250)",
   chromeBackgroundColor: "oklch(0.14 0.015 260)",
@@ -60,7 +63,7 @@ const lightTheme = themeQuartz.withParams({
   borderColor: "oklch(0.88 0.01 260)",
   rowHoverColor: "oklch(0.96 0.005 260)",
   selectedRowBackgroundColor: "oklch(0.93 0.01 250)",
-  oddRowBackgroundColor: "oklch(0.98 0.003 260)",
+  oddRowBackgroundColor: "oklch(0.96 0.005 260)",
   headerColumnResizeHandleColor: "oklch(0.55 0.15 250)",
   accentColor: "oklch(0.55 0.2 250)",
   chromeBackgroundColor: "oklch(0.97 0.005 260)",
@@ -73,6 +76,7 @@ interface GridLayout {
   columnWidths: Record<string, number>;
   sortModel: { colId: string; sort: "asc" | "desc" }[];
   groupByColumn: string | null;
+  isDefault?: boolean;
 }
 
 function loadLayouts(gridId: string): GridLayout[] {
@@ -111,7 +115,7 @@ export function DataGrid<T>({
   height,
   gridId,
   pagination = true,
-  paginationPageSize = 25,
+  paginationPageSize = 50,
   exportFileName = "export",
   renderMobileCard,
   onCreate,
@@ -140,12 +144,41 @@ export function DataGrid<T>({
     []
   );
 
-  const autoSizeStrategy = useMemo(() => ({
-    type: "fitCellContents" as const,
-  }), []);
+  // Show native title tooltip only when cell text is actually truncated
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onCellMouseOver = useCallback((params: any) => {
+    const evt = params.event as Event | null | undefined;
+    if (!evt) return;
+    const target = evt.target as HTMLElement | null;
+    if (!target) return;
+    // AG Grid renders cell text inside .ag-cell-value or the cell itself
+    const el = target.closest<HTMLElement>(".ag-cell-value") ?? target.closest<HTMLElement>(".ag-cell");
+    if (!el) return;
+    if (el.scrollWidth > el.clientWidth) {
+      el.title = el.textContent?.trim() ?? "";
+    } else {
+      el.removeAttribute("title");
+    }
+  }, []);
+
+  // Names of columns that should stretch to fill remaining space
+  const STRETCH_COLUMNS = useMemo(() => new Set([
+    t("common.name"),
+    t("common.description"),
+    "Nome",
+    "Descrizione",
+    "Name",
+    "Description",
+  ]), [t]);
 
   // --- Column visibility ---
-  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(() => {
+    const initial = new Set<string>();
+    for (const c of columnDefs) {
+      if (c.hide && c.headerName) initial.add(c.headerName);
+    }
+    return initial;
+  });
 
   const toggleableColumns = useMemo(
     () => columnDefs.filter((c) => c.headerName && c.headerName !== t("common.actions")),
@@ -219,13 +252,21 @@ export function DataGrid<T>({
     return result as T[];
   }, [rowData, groupByColumn, columnDefs, getGroupValue, collapsedGroups]);
 
-  // --- Fix 3: Row count ---
+  // --- Row count (with filter awareness) ---
   const totalRows = rowData.length;
-  const visibleRows = useMemo(() => {
-    if (!groupByColumn) return totalRows;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return groupedRowData.filter((r) => !(r as any).__isGroupRow).length;
-  }, [groupedRowData, groupByColumn, totalRows]);
+  const [filteredRowCount, setFilteredRowCount] = useState<number | null>(null);
+
+  const onFilterChanged = useCallback(() => {
+    if (!gridApiRef.current) return;
+    let count = 0;
+    gridApiRef.current.forEachNodeAfterFilter((node) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      if (node.data && !(node.data as any).__isGroupRow) count++;
+    });
+    setFilteredRowCount(count === totalRows ? null : count);
+  }, [totalRows]);
+
+  const displayedRowCount = filteredRowCount ?? totalRows;
 
   const toggleGroupCollapse = useCallback((groupKey: string) => {
     setCollapsedGroups((prev) => {
@@ -266,9 +307,18 @@ export function DataGrid<T>({
   const [layouts, setLayouts] = useState<GridLayout[]>([]);
   const [layoutNameInput, setLayoutNameInput] = useState("");
   const [showSaveInput, setShowSaveInput] = useState(false);
+  const defaultLayoutApplied = useRef(false);
 
   useEffect(() => {
-    setLayouts(loadLayouts(effectiveGridId));
+    const loaded = loadLayouts(effectiveGridId);
+    setLayouts(loaded);
+    // Apply default layout on first load
+    const defaultLayout = loaded.find((l) => l.isDefault);
+    if (defaultLayout && !defaultLayoutApplied.current) {
+      defaultLayoutApplied.current = true;
+      setHiddenColumns(new Set(defaultLayout.hiddenColumns));
+      setGroupByColumn(defaultLayout.groupByColumn);
+    }
   }, [effectiveGridId]);
 
   const getCurrentState = useCallback((): Omit<GridLayout, "name"> => {
@@ -321,6 +371,15 @@ export function DataGrid<T>({
     setOptionsMenuOpen(false);
   }, []);
 
+  const handleToggleDefault = useCallback((name: string) => {
+    const updated = layouts.map((l) => ({
+      ...l,
+      isDefault: l.name === name ? !l.isDefault : false,
+    }));
+    setLayouts(updated);
+    saveLayouts(effectiveGridId, updated);
+  }, [layouts, effectiveGridId]);
+
   const handleDeleteLayout = useCallback((name: string) => {
     const updated = layouts.filter((l) => l.name !== name);
     setLayouts(updated);
@@ -332,19 +391,25 @@ export function DataGrid<T>({
     setGroupByColumn(null);
     if (gridApiRef.current) {
       gridApiRef.current.resetColumnState();
-      gridApiRef.current.autoSizeAllColumns();
     }
     setOptionsMenuOpen(false);
   }, []);
 
   // --- Visible columns ---
-  const visibleColumnDefs = useMemo(
-    () => columnDefs.map((c) => ({
+  const visibleColumnDefs = useMemo(() => {
+    const hasStretch = columnDefs.some((c) => c.headerName && STRETCH_COLUMNS.has(c.headerName));
+    return columnDefs.map((c) => ({
       ...c,
       hide: c.headerName ? hiddenColumns.has(c.headerName) : false,
-    })),
-    [columnDefs, hiddenColumns]
-  );
+      // If a stretch column exists, give it flex:1 to fill remaining space
+      // If no stretch column exists, give all resizable columns flex:1
+      ...(c.headerName && STRETCH_COLUMNS.has(c.headerName)
+        ? { flex: 1 }
+        : !hasStretch && c.resizable !== false && c.headerName
+          ? { flex: 1 }
+          : {}),
+    }));
+  }, [columnDefs, hiddenColumns, STRETCH_COLUMNS]);
 
   // --- Edit column ---
   const editColDef = useMemo<ColDef<T> | null>(() => {
@@ -386,6 +451,31 @@ export function DataGrid<T>({
     setSelectedRows(selected);
   }, [onDelete]);
 
+  // --- Double click to edit ---
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const onRowDoubleClicked = useCallback((params: any) => {
+    if (!onEdit || !params.data || params.data.__isGroupRow) return;
+    onEdit(params.data as T);
+  }, [onEdit]);
+
+  // --- Keyboard delete ---
+  useEffect(() => {
+    if (!onDelete) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Delete" || e.key === "Backspace") {
+        // Don't trigger when typing in inputs/textareas
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+        if (selectedRows.length > 0) {
+          e.preventDefault();
+          onDelete(selectedRows);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [onDelete, selectedRows]);
+
   // --- Final column defs ---
   const finalColumnDefs = useMemo(() => {
     const cols = visibleColumnDefs;
@@ -396,73 +486,198 @@ export function DataGrid<T>({
     gridApiRef.current = params.api;
   }, []);
 
-  // --- Fix 2: Export only visible columns ---
+  const onFirstDataRendered = useCallback(() => {
+    // Apply default layout sort/widths after data is rendered
+    const defaultLayout = layouts.find((l) => l.isDefault);
+    if (defaultLayout && gridApiRef.current) {
+      const colState = gridApiRef.current.getColumnState().map((cs) => {
+        const sortEntry = defaultLayout.sortModel.find((s) => s.colId === cs.colId);
+        return { ...cs, sort: sortEntry?.sort ?? null, sortIndex: sortEntry ? 0 : null };
+      });
+      gridApiRef.current.applyColumnState({ state: colState });
+    }
+  }, [layouts]);
+
+  // --- Export helpers ---
+  const DATE_RE = /^\d{1,4}[/\-.]\d{1,2}[/\-.]\d{1,4}$/;
+
+  const getExportRaw = useCallback((item: T, col: ColDef<T>) => {
+    const field = col.field as string | undefined;
+    const vg = col.valueGetter;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let v: any;
+    if (vg && typeof vg === "function") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      v = vg({ data: item, colDef: col } as any);
+    } else if (field) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      v = (item as any)[field];
+    }
+    return v;
+  }, []);
+
+  const getExportDisplay = useCallback((item: T, col: ColDef<T>) => {
+    const raw = getExportRaw(item, col);
+    const vf = col.valueFormatter;
+    if (vf && typeof vf === "function") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return vf({ value: raw, data: item, colDef: col } as any);
+    }
+    return raw;
+  }, [getExportRaw]);
+
+  // Fields that must always be exported as text (codes, identifiers)
+  const FORCE_TEXT_FIELDS = new Set(["tax_code", "vat_number", "sdi_code", "iban", "zip_code"]);
+  const FORCE_TEXT_HEADERS = new Set(["C.F. / P.IVA", "CF", "P.IVA", "SDI", "IBAN", "CAP"]);
+
+  /** Convert a cell value to a properly typed XLSX cell */
+  const toCellValue = useCallback((item: T, col: ColDef<T>) => {
+    const raw = getExportRaw(item, col);
+    const display = getExportDisplay(item, col);
+
+    // Force text for code/identifier columns
+    const field = col.field as string | undefined;
+    if (
+      (field && FORCE_TEXT_FIELDS.has(field)) ||
+      (col.headerName && FORCE_TEXT_HEADERS.has(col.headerName))
+    ) {
+      return String(display ?? "");
+    }
+
+    if (typeof raw === "number") return raw;
+    if (raw instanceof Date) return raw;
+    // ISO date from raw
+    if (typeof raw === "string" && /^\d{4}-\d{2}-\d{2}/.test(raw)) {
+      const d = new Date(raw);
+      if (!isNaN(d.getTime())) return d;
+    }
+    const s = String(display ?? "");
+    if (!s) return "";
+    // Formatted date dd/mm/yyyy or similar
+    if (DATE_RE.test(s)) {
+      const p = s.split(/[/\-.]/);
+      if (p.length === 3) {
+        const d = p[2].length === 4
+          ? new Date(+p[2], +p[1] - 1, +p[0])
+          : p[0].length === 4
+            ? new Date(+p[0], +p[1] - 1, +p[2])
+            : null;
+        if (d && !isNaN(d.getTime())) return d;
+      }
+    }
+    // Numeric string (but not zero-padded codes like "00123")
+    const cleaned = s.replace(/\./g, "").replace(",", ".");
+    const num = Number(cleaned);
+    if (s.trim() && !isNaN(num) && isFinite(num) && !/^0\d/.test(s.trim())) return num;
+    return s;
+  }, [getExportRaw, getExportDisplay]);
+
+  /** Header style constant */
+  const HEADER_STYLE = {
+    fill: { fgColor: { rgb: "4472C4" } },
+    font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+    alignment: { horizontal: "center" as const, vertical: "center" as const },
+    border: {
+      bottom: { style: "thin" as const, color: { rgb: "2F5496" } },
+    },
+  };
+
+  /** Build a styled worksheet from items */
+  const buildSheet = useCallback((headers: string[], items: T[], cols: ColDef<T>[]): XLSX.WorkSheet => {
+    const colWidths = headers.map((h) => h.length);
+    const sheetRows: unknown[][] = [];
+    for (const item of items) {
+      const row = cols.map((col, ci) => {
+        const val = toCellValue(item, col);
+        const len = String(val ?? "").length;
+        if (len > colWidths[ci]) colWidths[ci] = len;
+        return val;
+      });
+      sheetRows.push(row);
+    }
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sheetRows]);
+    // Style headers
+    const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+    for (let C = range.s.c; C <= range.e.c; C++) {
+      const addr = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (ws[addr]) ws[addr].s = HEADER_STYLE;
+    }
+    // Detect which columns are forced-text
+    const forceTextCols = new Set<number>();
+    cols.forEach((col, ci) => {
+      const field = col.field as string | undefined;
+      if (
+        (field && FORCE_TEXT_FIELDS.has(field)) ||
+        (col.headerName && FORCE_TEXT_HEADERS.has(col.headerName))
+      ) {
+        forceTextCols.add(ci);
+      }
+    });
+    // Format date cells + force text cells
+    for (let R = 1; R <= range.e.r; R++) {
+      for (let C = range.s.c; C <= range.e.c; C++) {
+        const addr = XLSX.utils.encode_cell({ r: R, c: C });
+        const cell = ws[addr];
+        if (!cell) continue;
+        if (cell.v instanceof Date) {
+          cell.t = "d";
+          cell.z = "DD/MM/YYYY";
+        } else if (forceTextCols.has(C)) {
+          cell.t = "s";
+          cell.v = String(cell.v ?? "");
+        }
+      }
+    }
+    // Column widths (min 10, max 40)
+    ws["!cols"] = colWidths.map((w) => ({ wch: Math.min(Math.max(w + 3, 10), 40) }));
+    ws["!rows"] = [{ hpx: 26 }];
+    return ws;
+  }, [toCellValue]);
+
+  // --- Export ---
   const handleExport = useCallback(() => {
     const cols = columnDefs.filter(
-      (c) => c.headerName && c.headerName !== t("common.actions") && !hiddenColumns.has(c.headerName!)
+      (c) => c.headerName && c.headerName !== t("common.actions") && c.headerName !== t("common.active") && !hiddenColumns.has(c.headerName!)
     );
     const headers = cols.map((c) => c.headerName ?? "");
-    const rows: (string | number | boolean | null)[][] = [];
-    const dataSource = gridApiRef.current ? [] : rowData;
 
+    // Collect filtered/sorted items
+    const allItems: T[] = [];
     if (gridApiRef.current) {
       gridApiRef.current.forEachNodeAfterFilterAndSort((node) => {
-        if (!node.data) return;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        if ((node.data as any).__isGroupRow) return;
-        const row = cols.map((col) => {
-          const field = col.field as string | undefined;
-          const valueGetter = col.valueGetter;
-          const valueFormatter = col.valueFormatter;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let value: any;
-          if (valueGetter && typeof valueGetter === "function") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value = valueGetter({ data: node.data, node, colDef: col } as any);
-          } else if (field) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value = (node.data as any)[field];
-          }
-          if (valueFormatter && typeof valueFormatter === "function") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value = valueFormatter({ value, data: node.data, node, colDef: col } as any);
-          }
-          return value ?? "";
-        });
-        rows.push(row);
+        if (node.data && !(node.data as any).__isGroupRow) allItems.push(node.data);
       });
     } else {
-      for (const item of dataSource) {
-        const row = cols.map((col) => {
-          const field = col.field as string | undefined;
-          const valueGetter = col.valueGetter;
-          const valueFormatter = col.valueFormatter;
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          let value: any;
-          if (valueGetter && typeof valueGetter === "function") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value = valueGetter({ data: item, colDef: col } as any);
-          } else if (field) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value = (item as any)[field];
-          }
-          if (valueFormatter && typeof valueFormatter === "function") {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            value = valueFormatter({ value, data: item, colDef: col } as any);
-          }
-          return value ?? "";
-        });
-        rows.push(row);
+      allItems.push(...rowData);
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    if (groupByColumn) {
+      // One sheet per group
+      const groupCol = columnDefs.find((c) => c.headerName === groupByColumn);
+      if (groupCol) {
+        const groups = new Map<string, T[]>();
+        for (const item of allItems) {
+          const key = getGroupValue(item, groupCol) || t("common.none");
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(item);
+        }
+        for (const [name, items] of groups) {
+          const sheetName = name.replace(/[\\/*?:\[\]]/g, "_").substring(0, 31) || "Gruppo";
+          XLSX.utils.book_append_sheet(wb, buildSheet(headers, items, cols), sheetName);
+        }
       }
     }
 
-    const wsData = [headers, ...rows];
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    ws["!cols"] = headers.map((h) => ({ wch: Math.max(h.length + 2, 15) }));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Dati");
+    // Single sheet if not grouped (or fallback)
+    if (wb.SheetNames.length === 0) {
+      XLSX.utils.book_append_sheet(wb, buildSheet(headers, allItems, cols), "Dati");
+    }
+
     XLSX.writeFile(wb, `${exportFileName}.xlsx`);
-  }, [exportFileName, columnDefs, rowData, t, hiddenColumns]);
+  }, [exportFileName, columnDefs, rowData, t, hiddenColumns, groupByColumn, getGroupValue, buildSheet]);
 
   const containerStyle = useMemo(
     () => ({
@@ -471,7 +686,7 @@ export function DataGrid<T>({
         ? {}
         : height
           ? { height }
-          : { flex: "1 1 0%", minHeight: "400px" }),
+          : { flex: "1 1 0%", minHeight: 0 }),
     }),
     [domLayout, height]
   );
@@ -493,19 +708,27 @@ export function DataGrid<T>({
   // --- Mobile ---
   if (isMobile && renderMobileCard) {
     return (
-      <div className="space-y-3">
-        <div className="flex justify-end">
-          <Button variant="outline" size="sm" onClick={handleExport}>
+      <div className="flex flex-col flex-1 min-h-0 gap-3">
+        <div className="flex items-center gap-2 shrink-0">
+          {onCreate && (
+            <Button size="sm" onClick={onCreate}>
+              <Plus className="h-4 w-4 mr-1" />
+              {t("common.new")}
+            </Button>
+          )}
+          <div className="flex-1" />
+          <Button variant="outline" size="sm" disabled={rowData.length === 0} className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" onClick={handleExport}>
             <Download className="h-4 w-4 mr-1" />
             {t("common.exportExcel")}
           </Button>
         </div>
         {rowData.length === 0 ? (
-          <p className="text-muted-foreground text-center py-8">
-            {t("common.noData")}
-          </p>
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <Inbox className="h-12 w-12 text-muted-foreground/30" />
+            <p className="text-muted-foreground text-sm">{t("common.noData")}</p>
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 overflow-auto space-y-3">
             {rowData.map((item, i) => renderMobileCard(item, i))}
           </div>
         )}
@@ -542,11 +765,11 @@ export function DataGrid<T>({
         {/* Spacer */}
         <div className="flex-1" />
 
-        {/* Fix 3: Row count */}
+        {/* Row count */}
         <span className="text-xs text-muted-foreground">
-          {visibleRows === totalRows
-            ? `${totalRows} ${t("common.rows")}`
-            : `${visibleRows} / ${totalRows} ${t("common.rows")}`}
+          {filteredRowCount !== null
+            ? `${filteredRowCount} / ${totalRows} ${t("common.rows")}`
+            : `${totalRows} ${t("common.rows")}`}
         </span>
 
         {/* Group badge */}
@@ -566,7 +789,7 @@ export function DataGrid<T>({
 
         {/* Fix 5: Options menu (Columns + Group + Layout + Autosize) */}
         <div className="relative" ref={optionsMenuRef}>
-          <Button variant="outline" size="sm" onClick={() => setOptionsMenuOpen((v) => !v)}>
+          <Button variant="outline" size="sm" disabled={rowData.length === 0} onClick={() => setOptionsMenuOpen((v) => !v)}>
             <Settings2 className="h-4 w-4 mr-1" />
             {t("common.options")}
           </Button>
@@ -611,6 +834,7 @@ export function DataGrid<T>({
                         className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer w-full text-left"
                         onClick={() => { gridApiRef.current?.autoSizeAllColumns(); setOptionsMenuOpen(false); }}
                       >
+                        <ArrowLeftRight className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("common.autosizeColumns")}
                       </button>
                     </>
@@ -650,7 +874,19 @@ export function DataGrid<T>({
                       {layouts.length > 0 && (
                         <>
                           {layouts.map((layout) => (
-                            <div key={layout.name} className="flex items-center justify-between px-2 py-1.5 text-sm rounded hover:bg-muted group">
+                            <div key={layout.name} className="flex items-center gap-1 px-2 py-1.5 text-sm rounded hover:bg-muted group">
+                              <Tooltip>
+                                <TooltipTrigger render={
+                                  <button
+                                    type="button"
+                                    className="shrink-0 transition-colors"
+                                    onClick={() => handleToggleDefault(layout.name)}
+                                  >
+                                    <Star className={`h-3.5 w-3.5 ${layout.isDefault ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30 hover:text-amber-500"}`} />
+                                  </button>
+                                } />
+                                <TooltipContent>{layout.isDefault ? t("common.removeDefault") : t("common.setAsDefault")}</TooltipContent>
+                              </Tooltip>
                               <button type="button" className="flex-1 text-left cursor-pointer" onClick={() => handleLoadLayout(layout)}>
                                 {layout.name}
                               </button>
@@ -707,34 +943,44 @@ export function DataGrid<T>({
         </div>
 
         {/* Export */}
-        <Button variant="outline" size="sm" onClick={handleExport}>
+        <Button variant="outline" size="sm" disabled={rowData.length === 0} className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" onClick={handleExport}>
           <Download className="h-4 w-4 mr-1" />
           {t("common.exportExcel")}
         </Button>
       </div>
 
       {/* Grid */}
-      <div style={containerStyle}>
-        <AgGridReact<T>
-          ref={gridRef}
-          theme={gridTheme}
-          rowData={groupedRowData}
-          columnDefs={finalColumnDefs}
-          isFullWidthRow={groupByColumn ? isFullWidthRow : undefined}
-          fullWidthCellRenderer={groupByColumn ? fullWidthCellRenderer : undefined}
-          defaultColDef={defaultColDef}
-          autoSizeStrategy={autoSizeStrategy}
-          domLayout={domLayout}
-          localeText={agGridLocale}
-          onGridReady={onGridReady}
-          onSelectionChanged={onDelete ? onSelectionChanged : undefined}
-          rowSelection={onDelete ? { mode: "multiRow" } : undefined}
-          animateRows={true}
-          pagination={effectivePagination}
-          paginationPageSize={paginationPageSize}
-          suppressCellFocus={true}
-        />
-      </div>
+      {rowData.length === 0 ? (
+        <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] gap-3">
+          <Inbox className="h-12 w-12 text-muted-foreground/30" />
+          <p className="text-muted-foreground text-sm">{t("common.noData")}</p>
+        </div>
+      ) : (
+        <div style={containerStyle}>
+          <AgGridReact<T>
+            ref={gridRef}
+            theme={gridTheme}
+            rowData={groupedRowData}
+            columnDefs={finalColumnDefs}
+            isFullWidthRow={groupByColumn ? isFullWidthRow : undefined}
+            fullWidthCellRenderer={groupByColumn ? fullWidthCellRenderer : undefined}
+            defaultColDef={defaultColDef}
+            domLayout={domLayout}
+            localeText={agGridLocale}
+            onGridReady={onGridReady}
+            onFirstDataRendered={onFirstDataRendered}
+            onFilterChanged={onFilterChanged}
+            onRowDoubleClicked={onEdit ? onRowDoubleClicked : undefined}
+            onSelectionChanged={onDelete ? onSelectionChanged : undefined}
+            rowSelection={onDelete ? { mode: "multiRow" } : undefined}
+            animateRows={true}
+            pagination={effectivePagination}
+            paginationPageSize={paginationPageSize}
+            suppressCellFocus={true}
+            onCellMouseOver={onCellMouseOver}
+          />
+        </div>
+      )}
     </div>
   );
 }

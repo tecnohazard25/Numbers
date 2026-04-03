@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AppLayout } from "@/components/app-layout";
-import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { I18nProvider } from "@/lib/i18n/context";
 
 interface ImpersonationInfo {
@@ -66,13 +65,7 @@ export default function ProtectedLayout({
 
   return (
     <I18nProvider locale={locale}>
-      {impersonating && (
-        <ImpersonationBanner
-          name={impersonating.name}
-          email={impersonating.email}
-        />
-      )}
-      <AppLayout roles={roles} userName={userName}>
+      <AppLayout roles={roles} userName={userName} impersonating={impersonating}>
         {children}
       </AppLayout>
     </I18nProvider>

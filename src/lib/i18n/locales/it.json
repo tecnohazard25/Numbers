@@ -26,6 +26,8 @@
     "layoutName": "Nome layout",
     "options": "Opzioni",
     "rows": "righe",
+    "setAsDefault": "Imposta come predefinito",
+    "removeDefault": "Rimuovi predefinito",
     "new": "Nuovo",
     "close": "Chiudi",
     "update": "Aggiorna",
@@ -191,7 +193,23 @@
     "type": "Tipo",
     "address": "Indirizzo",
     "contactsColumn": "Contatti",
-    "impersonationError": "Errore nell'impersonazione: "
+    "impersonationError": "Errore nell'impersonazione: ",
+    "duplicateTaxCode": "Esiste già un soggetto con questo Codice Fiscale: {name}",
+    "duplicateVatNumber": "Esiste già un soggetto con questa Partita IVA: {name}",
+    "similarSubjectsFound": "Soggetti simili trovati",
+    "similarSubjectEntry": "{name} (CF: {taxCode}, P.IVA: {vatNumber})",
+    "findSimilar": "Soggetti simili",
+    "similarSubjectsTitle": "Soggetti simili",
+    "similarSubjectsDesc": "Seleziona il soggetto da mantenere (master) per ogni gruppo e unisci i duplicati.",
+    "noSimilarFound": "Nessun soggetto simile trovato",
+    "merge": "Unisci",
+    "mergeAll": "Unisci tutti",
+    "mergeSuccess": "Soggetti uniti con successo",
+    "master": "Master",
+    "sameTC": "Stesso C.F.",
+    "sameVAT": "Stessa P.IVA",
+    "sameName": "Stesso nome",
+    "subjectsCount": "soggetti"
   },
   "settings": {
     "title": "Impostazioni",
@@ -219,6 +237,23 @@
       "none": "Nessuna",
       "codePlaceholder": "es. 22, N1, N2.1...",
       "descriptionPlaceholder": "es. IVA 22% - Aliquota ordinaria"
+    },
+    "tags": {
+      "title": "Tag",
+      "description": "Gestisci i tag per categorizzare i soggetti",
+      "newTag": "Nuovo Tag",
+      "editTag": "Modifica Tag",
+      "color": "Colore",
+      "usageCount": "Utilizzi",
+      "subject": "soggetto",
+      "subjects": "soggetti",
+      "preview": "Anteprima",
+      "created": "Tag creato",
+      "updated": "Tag aggiornato",
+      "deleted": "Tag eliminato",
+      "confirmDelete": "Conferma Eliminazione",
+      "confirmDeleteDesc": "Sei sicuro di voler eliminare il tag",
+      "confirmDeleteInUse": "Questo tag è usato da {count} soggetti e verrà rimosso da tutti."
     }
   },
   "users": {
@@ -235,8 +270,8 @@
     "confirmDelete": "Conferma eliminazione",
     "confirmDeleteDesc": "Sei sicuro di voler eliminare l'utente {name}? Questa azione è irreversibile.",
     "irreversible": "Questa azione è irreversibile.",
-    "usersInOrg": "{count} utenti nella tua organizzazione",
-    "usersInThisOrg": "{count} utenti in questa organizzazione",
+    "usersInOrg": "utenti nella tua organizzazione",
+    "usersInThisOrg": "utenti in questa organizzazione",
     "userWillReceiveInvite": "L'utente riceverà un invito via email",
     "passwordExpiry": "Scadenza password",
     "setNewPassword": "Imposta nuova password",
@@ -246,7 +281,10 @@
     "restoring": "Ripristino...",
     "selectOrganization": "Seleziona organizzazione",
     "organization": "Organizzazione",
-    "usersQuestion": "utenti?"
+    "usersQuestion": "utenti?",
+    "initialPassword": "Password iniziale",
+    "generatePassword": "Genera",
+    "passwordExpiresOnLogin": "L'utente dovrà cambiare la password al primo accesso."
   },
   "orgs": {
     "title": "Organizzazioni",

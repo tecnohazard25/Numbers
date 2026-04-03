@@ -44,7 +44,7 @@ export function ImpersonationBanner({ name, email }: ImpersonationBannerProps) {
       <Button
         variant="outline"
         size="sm"
-        className="border-white text-white hover:bg-amber-700 hover:text-white"
+        className="border-white !text-white hover:bg-amber-700 hover:!text-white bg-transparent"
         onClick={handleStop}
         disabled={isRestoring}
       >
