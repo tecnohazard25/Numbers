@@ -127,3 +127,21 @@ export type VatCode = {
   created_at: string;
   updated_at: string;
 };
+
+// --- Phase 3: Collection Resources ---
+
+export type CollectionResourceType = "bank_account" | "online_platform" | "cash" | "other";
+
+export type CollectionResource = {
+  id: string;
+  organization_id: string;
+  name: string;
+  code: string;
+  type: CollectionResourceType;
+  iban: string | null;
+  is_active: boolean;
+  deleted_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
