@@ -34,6 +34,7 @@ import {
   DECIMAL_SEPARATORS,
   THOUSANDS_SEPARATORS,
   getLocaleDefaults,
+  detectBrowserLocale,
 } from "@/lib/locale-defaults";
 import {
   Card,
@@ -53,7 +54,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserCheck, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Ban, Globe, Pencil, Plus, RefreshCw, Save, Trash2, UserCheck, UserPlus, X } from "lucide-react";
 import { ROLE_LABELS, getRoleLabel } from "@/lib/roles";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
@@ -765,12 +766,40 @@ export default function OrganizationDetailPage() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                const detected = detectBrowserLocale();
+                handleLocaleChange(detected);
+                toast.success(`Impostazioni caricate dal browser (${detected})`);
+              }}
+            >
+              <Globe className="h-4 w-4 mr-1" />
+              Rileva dal browser
+            </Button>
             <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
               <Save className="h-4 w-4 mr-1" />
               {isSavingSettings ? "Salvataggio..." : "Salva impostazioni"}
             </Button>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Strumenti</CardTitle>
+          <CardDescription>
+            Genera dati di test per questa organizzazione
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            onClick={() => router.push(`/superadmin/organizations/${orgId}/generate`)}
+          >
+            Genera dati
+          </Button>
         </CardContent>
       </Card>
 
