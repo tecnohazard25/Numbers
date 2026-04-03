@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   createUserAction,
   toggleUserAction,
@@ -49,6 +50,7 @@ const AVAILABLE_ROLES = [
 ];
 
 export default function OrgUsersPage() {
+  const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -75,6 +77,11 @@ export default function OrgUsersPage() {
     async function init() {
       const infoRes = await fetch("/api/user-info");
       const info = await infoRes.json();
+      const roles: string[] = info.roles ?? [];
+      if (!roles.includes("org_admin")) {
+        router.push("/dashboard");
+        return;
+      }
       const oid = info.profile?.organization_id;
       if (oid) {
         setOrgId(oid);

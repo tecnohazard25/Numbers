@@ -55,6 +55,10 @@ export async function loginAction(formData: FormData) {
 }
 
 export async function logoutAction() {
+  const { cookies } = await import("next/headers");
+  const cookieStore = await cookies();
+  cookieStore.delete("real_superadmin_id");
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/login");

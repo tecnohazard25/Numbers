@@ -41,14 +41,9 @@ export async function GET() {
     (ur: any) => ur.roles?.name as string
   );
 
-  // If impersonating, add superadmin role so sidebar keeps full access
-  const effectiveRoles = isImpersonating
-    ? [...new Set([...roles, "superadmin"])]
-    : roles;
-
   return NextResponse.json({
     profile,
-    roles: effectiveRoles,
+    roles,
     userName: `${profile.first_name} ${profile.last_name}`.trim() || user.email,
     impersonating: isImpersonating
       ? {

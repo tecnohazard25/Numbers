@@ -49,7 +49,7 @@ interface Props {
 
 const ALL_ROLES = [
   { name: "superadmin", label: "Super Admin" },
-  { name: "org_admin", label: "Admin Organizzazione" },
+  { name: "org_admin", label: "Gestione Utenti" },
   { name: "business_analyst", label: "Business Analyst" },
   { name: "accountant", label: "Contabile" },
 ];

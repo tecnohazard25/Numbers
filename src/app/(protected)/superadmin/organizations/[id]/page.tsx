@@ -59,7 +59,7 @@ interface User {
 }
 
 const AVAILABLE_ROLES = [
-  { name: "org_admin", label: "Admin Organizzazione" },
+  { name: "org_admin", label: "Gestione Utenti" },
   { name: "business_analyst", label: "Business Analyst" },
   { name: "accountant", label: "Contabile" },
 ];
@@ -71,6 +71,7 @@ export default function OrganizationDetailPage() {
 
   const [org, setOrg] = useState<Organization | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  const [authorized, setAuthorized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteUser, setDeleteUser] = useState<User | null>(null);
@@ -141,7 +142,17 @@ export default function OrganizationDetailPage() {
   }
 
   useEffect(() => {
-    loadData();
+    async function init() {
+      const res = await fetch("/api/user-roles");
+      const { roles } = await res.json();
+      if (!roles?.includes("superadmin")) {
+        router.push("/dashboard");
+        return;
+      }
+      setAuthorized(true);
+      loadData();
+    }
+    init();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orgId]);
 
@@ -331,7 +342,7 @@ export default function OrganizationDetailPage() {
     []
   );
 
-  if (loading) {
+  if (!authorized || loading) {
     return (
       <div className="flex items-center justify-center py-12">
         <p className="text-muted-foreground">Caricamento...</p>

@@ -32,6 +32,7 @@ import {
 
 export default function NewOrganizationPage() {
   const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [locale, setLocale] = useState("it-IT");
   const [currency, setCurrency] = useState("EUR");
@@ -41,9 +42,19 @@ export default function NewOrganizationPage() {
   const [thousandsSep, setThousandsSep] = useState(".");
 
   useEffect(() => {
+    async function init() {
+      const res = await fetch("/api/user-roles");
+      const { roles } = await res.json();
+      if (!roles?.includes("superadmin")) {
+        router.push("/dashboard");
+        return;
+      }
+      setAuthorized(true);
+    }
+    init();
     const detected = detectBrowserLocale();
     applyLocaleDefaults(detected);
-  }, []);
+  }, [router]);
 
   function applyLocaleDefaults(loc: string) {
     setLocale(loc);
@@ -73,6 +84,8 @@ export default function NewOrganizationPage() {
     }
     setIsLoading(false);
   }
+
+  if (!authorized) return null;
 
   return (
     <div className="max-w-2xl mx-auto">

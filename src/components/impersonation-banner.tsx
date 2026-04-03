@@ -47,7 +47,7 @@ export function ImpersonationBanner({ name, email }: ImpersonationBannerProps) {
         disabled={isRestoring}
       >
         <EyeOff className="h-4 w-4 mr-1" />
-        {isRestoring ? "Ripristino..." : "Esci"}
+        {isRestoring ? "Ripristino..." : "Torna a Superadmin"}
       </Button>
     </div>
   );

@@ -2,6 +2,8 @@
 
 import {
   Building2,
+  Contact2,
+  KeyRound,
   Users,
   LayoutDashboard,
   LogOut,
@@ -19,7 +21,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -50,8 +53,16 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
     { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   ];
 
+  const anagraficaItems: NavItem[] = [
+    { title: "Soggetti", url: "/subjects", icon: Contact2 },
+  ];
+
   const isSuperadmin = roles.includes("superadmin");
   const isOrgAdmin = roles.includes("org_admin");
+  const hasAnagraficaAccess =
+    isOrgAdmin ||
+    roles.includes("business_analyst") ||
+    roles.includes("accountant");
 
   return (
     <Sidebar>
@@ -84,7 +95,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
         )}
         {isOrgAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Organizzazione</SidebarGroupLabel>
+            <SidebarGroupLabel>Gestione Utenti</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {orgAdminItems.map((item) => (
@@ -92,6 +103,26 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
                     <SidebarMenuButton
                       render={<Link href={item.url} />}
                       isActive={pathname === item.url}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
+        {hasAnagraficaAccess && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Anagrafica</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {anagraficaItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      render={<Link href={item.url} />}
+                      isActive={pathname.startsWith(item.url)}
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
@@ -119,14 +150,25 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4">
-        <div className="text-sm text-muted-foreground mb-2 truncate">
-          {userName}
-        </div>
+        <Link
+          href="/change-password"
+          className="flex items-center gap-2 text-sm text-muted-foreground mb-2 truncate hover:text-foreground transition-colors"
+          title="Cambia password"
+        >
+          <KeyRound className="h-4 w-4 shrink-0" />
+          <span className="truncate">{userName}</span>
+        </Link>
         <form action={logoutAction}>
-          <Button variant="outline" size="sm" className="w-full">
+          <button
+            type="submit"
+            className={cn(
+              buttonVariants({ variant: "outline", size: "sm" }),
+              "w-full"
+            )}
+          >
             <LogOut className="h-4 w-4 mr-2" />
             Esci
-          </Button>
+          </button>
         </form>
       </SidebarFooter>
     </Sidebar>

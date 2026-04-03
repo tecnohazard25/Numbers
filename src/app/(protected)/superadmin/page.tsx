@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Organization } from "@/types/supabase";
 import { OrganizationsTable } from "./organizations-table";
 import Link from "next/link";
@@ -8,13 +9,27 @@ import { Button } from "@/components/ui/button";
 import { Building2, Plus } from "lucide-react";
 
 export default function SuperadminPage() {
+  const router = useRouter();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
-    fetch("/api/organizations")
-      .then((res) => res.json())
-      .then((data) => setOrganizations(data.organizations ?? []));
-  }, []);
+    async function init() {
+      const res = await fetch("/api/user-roles");
+      const { roles } = await res.json();
+      if (!roles?.includes("superadmin")) {
+        router.push("/dashboard");
+        return;
+      }
+      setAuthorized(true);
+      const orgRes = await fetch("/api/organizations");
+      const data = await orgRes.json();
+      setOrganizations(data.organizations ?? []);
+    }
+    init();
+  }, [router]);
+
+  if (!authorized) return null;
 
   return (
     <div className="space-y-6">
