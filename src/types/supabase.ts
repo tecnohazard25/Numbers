@@ -145,3 +145,18 @@ export type CollectionResource = {
   created_at: string;
   updated_at: string;
 };
+
+// --- Phase 4: Payment Types ---
+
+export type PaymentType = {
+  id: string;
+  organization_id: string;
+  name: string;
+  code: string;
+  is_system: boolean;
+  is_active: boolean;
+  deleted_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
