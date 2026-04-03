@@ -23,7 +23,7 @@ export async function createUserAction(formData: FormData) {
   }
 
   const isSuperadmin = roles.includes("superadmin");
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
 
   // Org admin can only create in their own org
   const targetOrgId = isSuperadmin
@@ -34,11 +34,11 @@ export async function createUserAction(formData: FormData) {
     return { error: "Non autorizzato" };
   }
 
-  // Org admin cannot assign superadmin or org_admin roles
+  // Org admin cannot assign superadmin or user_manager roles
   if (
     isOrgAdmin &&
     !isSuperadmin &&
-    selectedRoles.some((r) => r === "superadmin" || r === "org_admin")
+    selectedRoles.some((r) => r === "superadmin" || r === "user_manager")
   ) {
     return { error: "Non puoi assegnare questo ruolo" };
   }
@@ -126,7 +126,7 @@ export async function updateUserAction(
 
   const { roles: currentRoles } = currentUser;
   const isSuperadmin = currentRoles.includes("superadmin");
-  const isOrgAdmin = currentRoles.includes("org_admin");
+  const isOrgAdmin = currentRoles.includes("user_manager");
 
   if (!isSuperadmin && !isOrgAdmin) {
     return { error: "Non autorizzato" };
@@ -197,7 +197,7 @@ export async function toggleUserAction(userId: string, isActive: boolean) {
   const { roles, profile: currentProfile } = currentUser;
 
   const isSuperadmin = roles.includes("superadmin");
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
 
   if (!isSuperadmin && !isOrgAdmin) {
     return { error: "Non autorizzato" };
@@ -205,7 +205,7 @@ export async function toggleUserAction(userId: string, isActive: boolean) {
 
   const admin = createAdminClient();
 
-  // If org_admin, check user belongs to same org
+  // If user_manager, check user belongs to same org
   if (isOrgAdmin && !isSuperadmin) {
     const { data: targetProfile } = await admin
       .from("profiles")
@@ -243,7 +243,7 @@ export async function deleteUserAction(userId: string) {
 
   const { roles, profile: currentProfile } = currentUser;
   const isSuperadmin = roles.includes("superadmin");
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
 
   if (!isSuperadmin && !isOrgAdmin) {
     return { error: "Non autorizzato" };
@@ -251,7 +251,7 @@ export async function deleteUserAction(userId: string) {
 
   const admin = createAdminClient();
 
-  // If org_admin, check user belongs to same org
+  // If user_manager, check user belongs to same org
   if (isOrgAdmin && !isSuperadmin) {
     const { data: targetProfile } = await admin
       .from("profiles")

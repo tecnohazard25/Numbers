@@ -79,7 +79,7 @@ export function LoginForm() {
 
     if (roles?.includes("superadmin")) {
       router.push("/superadmin");
-    } else if (roles?.includes("org_admin")) {
+    } else if (roles?.includes("user_manager")) {
       router.push("/org/users");
     } else {
       router.push("/dashboard");

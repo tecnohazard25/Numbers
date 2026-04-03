@@ -3,7 +3,7 @@
 import {
   Building2,
   Contact2,
-  KeyRound,
+  Settings,
   Users,
   LayoutDashboard,
   LogOut,
@@ -57,10 +57,13 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
     { title: "Soggetti", url: "/subjects", icon: Contact2 },
   ];
 
+  const settingsItems: NavItem[] = [
+    { title: "Impostazioni", url: "/settings", icon: Settings },
+  ];
+
   const isSuperadmin = roles.includes("superadmin");
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
   const hasAnagraficaAccess =
-    isOrgAdmin ||
     roles.includes("business_analyst") ||
     roles.includes("accountant");
 
@@ -133,6 +136,26 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
             </SidebarGroupContent>
           </SidebarGroup>
         )}
+        {roles.includes("accountant") && (
+          <SidebarGroup>
+            <SidebarGroupLabel>Configurazione</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {settingsItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      render={<Link href={item.url} />}
+                      isActive={pathname.startsWith(item.url)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
         <SidebarGroup>
           <SidebarGroupLabel>Generale</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -155,7 +178,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
           className="flex items-center gap-2 text-sm text-muted-foreground mb-2 truncate hover:text-foreground transition-colors"
           title="Cambia password"
         >
-          <KeyRound className="h-4 w-4 shrink-0" />
+          <Settings className="h-4 w-4 shrink-0" />
           <span className="truncate">{userName}</span>
         </Link>
         <form action={logoutAction}>

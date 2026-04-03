@@ -66,6 +66,22 @@ const ADDRESS_LABELS = [
   "Altro",
 ];
 
+const COUNTRY_LABELS: Record<string, string> = {
+  IT: "Italia",
+  DE: "Germania",
+  FR: "Francia",
+  ES: "Spagna",
+  GB: "Regno Unito",
+  US: "Stati Uniti",
+  CH: "Svizzera",
+  AT: "Austria",
+};
+
+const GENDER_LABELS: Record<string, string> = {
+  M: "Maschio",
+  F: "Femmina",
+};
+
 const TAG_COLORS = [
   "#6366f1",
   "#ec4899",
@@ -332,9 +348,14 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
 
   const filteredTags = availableTags.filter(
     (t) =>
-      t.name.toLowerCase().includes(tagSearch.toLowerCase()) &&
+      (!tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase())) &&
       !selectedTagIds.includes(t.id)
   );
+
+  const exactTagMatch = availableTags.some(
+    (t) => t.name.toLowerCase() === tagSearch.trim().toLowerCase()
+  );
+  const canCreateTag = tagSearch.trim().length > 0 && !exactTagMatch;
 
   const handleCreateTag = async () => {
     if (!tagSearch.trim()) return;
@@ -479,7 +500,9 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                   <Label>Sesso</Label>
                   <Select value={gender} onValueChange={(v) => setGender(v ?? "")}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleziona" />
+                      <SelectValue placeholder="Seleziona">
+                        {gender ? GENDER_LABELS[gender] : null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="M">Maschio</SelectItem>
@@ -638,7 +661,9 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                     onValueChange={(v) => updateAddress(addr._key, "label", v ?? "")}
                   >
                     <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Etichetta" />
+                      <SelectValue placeholder="Etichetta">
+                        {addr.label || null}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {ADDRESS_LABELS.map((l) => (
@@ -677,7 +702,9 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                     onValueChange={(v) => updateAddress(addr._key, "country_code", v ?? "IT")}
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue>
+                        {COUNTRY_LABELS[addr.country_code] ?? addr.country_code}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="IT">Italia</SelectItem>
@@ -772,7 +799,9 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                 onValueChange={(v) => updateContact(contact._key, "type", v ?? "mobile")}
               >
                 <SelectTrigger className="w-32">
-                  <SelectValue />
+                  <SelectValue>
+                    {CONTACT_TYPE_LABELS[contact.type]}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {(Object.keys(CONTACT_TYPE_LABELS) as ContactType[]).map((ct) => (
@@ -858,9 +887,21 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
               }}
               onFocus={() => setShowTagDropdown(true)}
               onBlur={() => setTimeout(() => setShowTagDropdown(false), 200)}
-              placeholder="Cerca o crea tag..."
+              placeholder="Digita e premi Invio per creare un tag..."
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (canCreateTag) {
+                    handleCreateTag();
+                  } else if (filteredTags.length === 1) {
+                    toggleTag(filteredTags[0].id);
+                    setTagSearch("");
+                    setShowTagDropdown(false);
+                  }
+                }
+              }}
             />
-            {showTagDropdown && tagSearch && (
+            {showTagDropdown && (filteredTags.length > 0 || canCreateTag) && (
               <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-lg border bg-popover shadow-md max-h-48 overflow-y-auto">
                 {filteredTags.map((tag) => (
                   <button
@@ -880,12 +921,9 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                     {tag.name}
                   </button>
                 ))}
-                {filteredTags.length === 0 && (
-                  <div className="px-3 py-2 space-y-2">
-                    <p className="text-sm text-muted-foreground">
-                      Nessun tag trovato
-                    </p>
-                    <div className="flex items-center gap-2">
+                {canCreateTag && (
+                  <div className="border-t px-3 py-2 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <div className="flex gap-1">
                         {TAG_COLORS.map((c) => (
                           <button
@@ -911,7 +949,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                         }}
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Crea &quot;{tagSearch}&quot;
+                        Crea &quot;{tagSearch.trim()}&quot;
                       </Button>
                     </div>
                   </div>

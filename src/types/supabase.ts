@@ -26,7 +26,7 @@ export type Profile = {
 
 export type Role = {
   id: string;
-  name: "superadmin" | "org_admin" | "business_analyst" | "accountant";
+  name: "superadmin" | "user_manager" | "business_analyst" | "accountant";
   description: string | null;
 };
 
@@ -112,4 +112,18 @@ export type SubjectWithDetails = Subject & {
   subject_addresses: SubjectAddress[];
   subject_contacts: SubjectContact[];
   subject_tags: (SubjectTag & { tags: Tag })[];
+};
+
+// --- VAT Codes ---
+
+export type VatCode = {
+  id: string;
+  organization_id: string;
+  code: string;
+  description: string;
+  rate: number;
+  nature: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 };

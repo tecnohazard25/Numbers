@@ -9,7 +9,10 @@ import {
   deleteUserAction,
   updateUserAction,
 } from "@/app/actions/users";
-import { updateOrganizationSettingsAction } from "@/app/actions/organizations";
+import {
+  updateOrganizationSettingsAction,
+  renameOrganizationAction,
+} from "@/app/actions/organizations";
 import { DataGrid } from "@/components/data-grid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +29,10 @@ import { Separator } from "@/components/ui/separator";
 import {
   SUPPORTED_LOCALES,
   CURRENCIES,
+  DATE_FORMATS,
+  TIME_FORMATS,
+  DECIMAL_SEPARATORS,
+  THOUSANDS_SEPARATORS,
   getLocaleDefaults,
 } from "@/lib/locale-defaults";
 import {
@@ -45,7 +52,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserCheck, UserPlus, X } from "lucide-react";
+import { ROLE_LABELS, getRoleLabel } from "@/lib/roles";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
 interface User {
@@ -59,7 +68,7 @@ interface User {
 }
 
 const AVAILABLE_ROLES = [
-  { name: "org_admin", label: "Gestione Utenti" },
+  { name: "user_manager", label: "Gestione Utenti" },
   { name: "business_analyst", label: "Business Analyst" },
   { name: "accountant", label: "Contabile" },
 ];
@@ -92,6 +101,11 @@ export default function OrganizationDetailPage() {
   const [thousandsSep, setThousandsSep] = useState(".");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
+  // Rename state
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
+
   async function loadData() {
     const [orgRes, usersRes] = await Promise.all([
       fetch(`/api/organizations/${orgId}`),
@@ -121,6 +135,20 @@ export default function OrganizationDetailPage() {
     setTimeFormat(defaults.time_format);
     setDecimalSep(defaults.decimal_separator);
     setThousandsSep(defaults.thousands_separator);
+  }
+
+  async function handleRename() {
+    if (!newName.trim()) return;
+    setIsRenaming(true);
+    const result = await renameOrganizationAction(orgId, newName);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success("Organizzazione rinominata");
+      setRenameDialogOpen(false);
+      loadData();
+    }
+    setIsRenaming(false);
   }
 
   async function handleSaveSettings() {
@@ -276,17 +304,15 @@ export default function OrganizationDetailPage() {
         headerName: "Ruoli",
         valueGetter: (params) =>
           params.data?.user_roles
-            ?.map((ur) => ur.roles.name)
+            ?.map((ur) => getRoleLabel(ur.roles.name))
             .join(", ") ?? "",
         filter: "agTextColumnFilter",
-        enableRowGroup: true,
       },
       {
         headerName: "Stato",
         field: "is_active",
         filter: "agTextColumnFilter",
         valueFormatter: (params) => (params.value ? "Attivo" : "Disattivo"),
-        enableRowGroup: true,
       },
       {
         headerName: "Azioni",
@@ -300,13 +326,18 @@ export default function OrganizationDetailPage() {
           const user = params.data;
           return (
             <div className="flex items-center gap-2 h-full">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openEditDialog(user)}
-              >
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openEditDialog(user)}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                } />
+                <TooltipContent>Modifica</TooltipContent>
+              </Tooltip>
               <Button
                 variant="secondary"
                 size="sm"
@@ -326,13 +357,18 @@ export default function OrganizationDetailPage() {
                   <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
                 )}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteUser(user)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteUser(user)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                } />
+                <TooltipContent>Elimina</TooltipContent>
+              </Tooltip>
             </div>
           );
         },
@@ -361,16 +397,38 @@ export default function OrganizationDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => router.push("/superadmin")}
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">{org.name}</h1>
-          <p className="text-sm text-muted-foreground">Gestione utenti</p>
+        <Tooltip>
+          <TooltipTrigger render={
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.push("/superadmin")}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          } />
+          <TooltipContent>Torna alle organizzazioni</TooltipContent>
+        </Tooltip>
+        <div className="flex items-center gap-2">
+          <div>
+            <h1 className="text-2xl font-bold">{org.name}</h1>
+            <p className="text-sm text-muted-foreground">Gestione organizzazione</p>
+          </div>
+          <Tooltip>
+            <TooltipTrigger render={
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setNewName(org.name);
+                  setRenameDialogOpen(true);
+                }}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            } />
+            <TooltipContent>Rinomina</TooltipContent>
+          </Tooltip>
         </div>
       </div>
 
@@ -470,7 +528,7 @@ export default function OrganizationDetailPage() {
                 <div className="flex gap-1 flex-wrap">
                   {user.user_roles.map((ur) => (
                     <Badge key={ur.roles.name} variant="outline">
-                      {ur.roles.name}
+                      {getRoleLabel(ur.roles.name)}
                     </Badge>
                   ))}
                 </div>
@@ -604,7 +662,9 @@ export default function OrganizationDetailPage() {
               <Label>Lingua</Label>
               <Select value={locale} onValueChange={(v) => v && handleLocaleChange(v)}>
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue>
+                    {SUPPORTED_LOCALES.find((l) => l.value === locale)?.label ?? locale}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {SUPPORTED_LOCALES.map((l) => (
@@ -634,36 +694,74 @@ export default function OrganizationDetailPage() {
 
             <div className="space-y-2">
               <Label>Formato data</Label>
-              <Input
-                value={dateFormat}
-                onChange={(e) => setDateFormat(e.target.value)}
-              />
+              <Select value={dateFormat} onValueChange={(v) => v && setDateFormat(v)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {DATE_FORMATS.find((f) => f.value === dateFormat)?.label ?? dateFormat}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DATE_FORMATS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <Label>Formato ora</Label>
-              <Input
-                value={timeFormat}
-                onChange={(e) => setTimeFormat(e.target.value)}
-              />
+              <Select value={timeFormat} onValueChange={(v) => v && setTimeFormat(v)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {TIME_FORMATS.find((f) => f.value === timeFormat)?.label ?? timeFormat}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_FORMATS.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>
+                      {f.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <Label>Separatore decimale</Label>
-              <Input
-                value={decimalSep}
-                onChange={(e) => setDecimalSep(e.target.value)}
-                maxLength={1}
-              />
+              <Select value={decimalSep} onValueChange={(v) => v && setDecimalSep(v)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {DECIMAL_SEPARATORS.find((s) => s.value === decimalSep)?.label ?? decimalSep}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {DECIMAL_SEPARATORS.map((s) => (
+                    <SelectItem key={s.value} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
               <Label>Separatore migliaia</Label>
-              <Input
-                value={thousandsSep}
-                onChange={(e) => setThousandsSep(e.target.value)}
-                maxLength={1}
-              />
+              <Select value={thousandsSep} onValueChange={(v) => v !== null && setThousandsSep(v)}>
+                <SelectTrigger>
+                  <SelectValue>
+                    {THOUSANDS_SEPARATORS.find((s) => s.value === thousandsSep)?.label ?? thousandsSep}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {THOUSANDS_SEPARATORS.map((s) => (
+                    <SelectItem key={s.value || "none"} value={s.value}>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -675,6 +773,42 @@ export default function OrganizationDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Rename Organization Dialog */}
+      <Dialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setRenameDialogOpen(false);
+            setNewName("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rinomina organizzazione</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="newOrgName">Nuovo nome</Label>
+            <Input
+              id="newOrgName"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleRename()}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
+              <X className="h-4 w-4 mr-1" />
+              Annulla
+            </Button>
+            <Button onClick={handleRename} disabled={isRenaming || !newName.trim()}>
+              <Save className="h-4 w-4 mr-1" />
+              {isRenaming ? "Salvataggio..." : "Salva"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={!!deleteUser}

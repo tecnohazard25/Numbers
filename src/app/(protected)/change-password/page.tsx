@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { forceChangePasswordAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,10 +15,17 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { PASSWORD_REQUIREMENTS } from "@/lib/password";
-import { KeyRound, ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, KeyRound, Monitor, Moon, Palette, Save, Sun } from "lucide-react";
+
+const THEME_OPTIONS = [
+  { value: "light", label: "Chiaro", icon: Sun },
+  { value: "dark", label: "Scuro", icon: Moon },
+  { value: "system", label: "Automatico", icon: Monitor },
+] as const;
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const { theme, setTheme } = useTheme();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,8 +40,8 @@ export default function ChangePasswordPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto">
-      <div className="mb-4">
+    <div className="max-w-md mx-auto space-y-6">
+      <div>
         <Button
           variant="ghost"
           size="sm"
@@ -43,6 +51,49 @@ export default function ChangePasswordPage() {
           Indietro
         </Button>
       </div>
+
+      {/* Tema */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Palette className="h-5 w-5" />
+            Tema
+          </CardTitle>
+          <CardDescription>
+            Scegli il tema dell&apos;interfaccia
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-3 gap-3">
+            {THEME_OPTIONS.map((opt) => {
+              const Icon = opt.icon;
+              const isActive = theme === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => setTheme(opt.value)}
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                    isActive
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-muted-foreground/30"
+                  }`}
+                >
+                  <Icon className={`h-6 w-6 ${isActive ? "text-primary" : "text-muted-foreground"}`} />
+                  <span className={`text-sm font-medium ${isActive ? "text-primary" : "text-muted-foreground"}`}>
+                    {opt.label}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            &ldquo;Automatico&rdquo; segue le impostazioni del sistema operativo.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Cambio password */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

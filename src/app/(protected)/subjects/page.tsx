@@ -108,7 +108,7 @@ export default function SubjectsPage() {
       const roles: string[] = userData.roles ?? [];
 
       setCanWrite(
-        roles.includes("superadmin") || roles.includes("org_admin")
+        roles.includes("superadmin") || roles.includes("user_manager")
       );
 
       if (!orgId) {
@@ -337,7 +337,11 @@ export default function SubjectsPage() {
         </div>
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tipo" />
+            <SelectValue placeholder="Tipo">
+              {typeFilter === "all"
+                ? "Tutti i tipi"
+                : TYPE_LABELS[typeFilter as SubjectType] ?? typeFilter}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti i tipi</SelectItem>
@@ -349,7 +353,11 @@ export default function SubjectsPage() {
         </Select>
         <Select value={tagFilter} onValueChange={(v) => setTagFilter(v ?? "all")}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tag" />
+            <SelectValue placeholder="Tag">
+              {tagFilter === "all"
+                ? "Tutti i tag"
+                : tags.find((t) => t.id === tagFilter)?.name ?? tagFilter}
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Tutti i tag</SelectItem>

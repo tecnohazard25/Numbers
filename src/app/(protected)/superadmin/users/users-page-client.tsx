@@ -47,12 +47,9 @@ interface Props {
   isSuperadmin: boolean;
 }
 
-const ALL_ROLES = [
-  { name: "superadmin", label: "Super Admin" },
-  { name: "org_admin", label: "Gestione Utenti" },
-  { name: "business_analyst", label: "Business Analyst" },
-  { name: "accountant", label: "Contabile" },
-];
+import { ROLE_LABELS } from "@/lib/roles";
+
+const ALL_ROLES = Object.entries(ROLE_LABELS).map(([name, label]) => ({ name, label }));
 
 export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -61,7 +58,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
   const availableRoles = isSuperadmin
     ? ALL_ROLES
     : ALL_ROLES.filter(
-        (r) => r.name !== "superadmin" && r.name !== "org_admin"
+        (r) => r.name !== "superadmin" && r.name !== "user_manager"
       );
 
   async function handleToggle(userId: string, currentActive: boolean) {
@@ -109,7 +106,6 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
               valueGetter: (params: any) =>
                 params.data?.organizations?.name ?? "—",
               filter: "agTextColumnFilter",
-              enableRowGroup: true,
             } as ColDef<User>,
           ]
         : []),
@@ -117,7 +113,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
         headerName: "Ruoli",
         valueGetter: (params) =>
           params.data?.user_roles
-            ?.map((ur: { roles: { name: string } }) => ur.roles.name)
+            ?.map((ur: { roles: { name: string } }) => ROLE_LABELS[ur.roles.name] ?? ur.roles.name)
             .join(", ") ?? "",
         filter: "agTextColumnFilter",
       },
@@ -268,7 +264,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
             <div className="flex gap-1 flex-wrap">
               {user.user_roles.map((ur) => (
                 <Badge key={ur.roles.name} variant="outline">
-                  {ur.roles.name}
+                  {ROLE_LABELS[ur.roles.name] ?? ur.roles.name}
                 </Badge>
               ))}
             </div>

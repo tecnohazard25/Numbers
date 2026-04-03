@@ -47,7 +47,7 @@ export async function createSubjectAction(data: SubjectInput) {
   if (!currentUser) return { error: "Non autorizzato" };
 
   const { roles, profile } = currentUser;
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
   const isSuperadmin = roles.includes("superadmin");
 
   if (!isSuperadmin && !isOrgAdmin) {
@@ -172,7 +172,7 @@ export async function updateSubjectAction(subjectId: string, data: SubjectInput)
   if (!currentUser) return { error: "Non autorizzato" };
 
   const { roles, profile } = currentUser;
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
   const isSuperadmin = roles.includes("superadmin");
 
   if (!isSuperadmin && !isOrgAdmin) {
@@ -301,7 +301,7 @@ export async function deleteSubjectAction(subjectId: string) {
   if (!currentUser) return { error: "Non autorizzato" };
 
   const { roles, profile } = currentUser;
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
   const isSuperadmin = roles.includes("superadmin");
 
   if (!isSuperadmin && !isOrgAdmin) {
@@ -335,7 +335,7 @@ export async function toggleSubjectAction(subjectId: string, isActive: boolean) 
   if (!currentUser) return { error: "Non autorizzato" };
 
   const { roles, profile } = currentUser;
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
   const isSuperadmin = roles.includes("superadmin");
 
   if (!isSuperadmin && !isOrgAdmin) {

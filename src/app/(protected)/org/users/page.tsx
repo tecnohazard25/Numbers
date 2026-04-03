@@ -31,8 +31,10 @@ import {
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
+import { ROLE_LABELS } from "@/lib/roles";
 
 interface User {
   id: string;
@@ -78,7 +80,7 @@ export default function OrgUsersPage() {
       const infoRes = await fetch("/api/user-info");
       const info = await infoRes.json();
       const roles: string[] = info.roles ?? [];
-      if (!roles.includes("org_admin")) {
+      if (!roles.includes("user_manager")) {
         router.push("/dashboard");
         return;
       }
@@ -178,7 +180,7 @@ export default function OrgUsersPage() {
       {
         headerName: "Ruoli",
         valueGetter: (params) =>
-          params.data?.user_roles?.map((ur) => ur.roles.name).join(", ") ?? "",
+          params.data?.user_roles?.map((ur) => ROLE_LABELS[ur.roles.name] ?? ur.roles.name).join(", ") ?? "",
         filter: "agTextColumnFilter",
       },
       {
@@ -199,9 +201,14 @@ export default function OrgUsersPage() {
           const user = params.data;
           return (
             <div className="flex items-center gap-2 h-full">
-              <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                <Pencil className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                } />
+                <TooltipContent>Modifica</TooltipContent>
+              </Tooltip>
               <Button
                 variant="outline"
                 size="sm"
@@ -213,13 +220,18 @@ export default function OrgUsersPage() {
                   <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
                 )}
               </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setDeleteUser(user)}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
+              <Tooltip>
+                <TooltipTrigger render={
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setDeleteUser(user)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                } />
+                <TooltipContent>Elimina</TooltipContent>
+              </Tooltip>
             </div>
           );
         },
@@ -320,7 +332,7 @@ export default function OrgUsersPage() {
                 <div className="flex gap-1 flex-wrap">
                   {user.user_roles.map((ur) => (
                     <Badge key={ur.roles.name} variant="outline">
-                      {ur.roles.name}
+                      {ROLE_LABELS[ur.roles.name] ?? ur.roles.name}
                     </Badge>
                   ))}
                 </div>

@@ -47,7 +47,7 @@ export async function loginAction(formData: FormData) {
 
   if (roleNames.includes("superadmin")) {
     return { redirectTo: "/superadmin" };
-  } else if (roleNames.includes("org_admin")) {
+  } else if (roleNames.includes("user_manager")) {
     return { redirectTo: "/org/users" };
   } else {
     return { redirectTo: "/dashboard" };
@@ -195,7 +195,7 @@ export async function forceChangePasswordAction(formData: FormData) {
 
   if (roleNames.includes("superadmin")) {
     redirect("/superadmin");
-  } else if (roleNames.includes("org_admin")) {
+  } else if (roleNames.includes("user_manager")) {
     redirect("/org/users");
   } else {
     redirect("/dashboard");

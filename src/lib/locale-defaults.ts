@@ -115,3 +115,28 @@ export function detectBrowserLocale(): string {
 export const CURRENCIES = [
   "EUR", "USD", "GBP", "CHF", "BRL", "PLN", "RON", "SEK", "NOK", "DKK", "CZK", "HUF",
 ];
+
+export const DATE_FORMATS = [
+  { value: "dd/MM/yyyy", label: "dd/MM/yyyy (31/12/2026)" },
+  { value: "MM/dd/yyyy", label: "MM/dd/yyyy (12/31/2026)" },
+  { value: "yyyy-MM-dd", label: "yyyy-MM-dd (2026-12-31)" },
+  { value: "dd.MM.yyyy", label: "dd.MM.yyyy (31.12.2026)" },
+  { value: "dd-MM-yyyy", label: "dd-MM-yyyy (31-12-2026)" },
+];
+
+export const TIME_FORMATS = [
+  { value: "HH:mm", label: "HH:mm — 24h (14:30)" },
+  { value: "hh:mm a", label: "hh:mm a — 12h (02:30 PM)" },
+];
+
+export const DECIMAL_SEPARATORS = [
+  { value: ",", label: "Virgola (,)" },
+  { value: ".", label: "Punto (.)" },
+];
+
+export const THOUSANDS_SEPARATORS = [
+  { value: ".", label: "Punto (.)" },
+  { value: ",", label: "Virgola (,)" },
+  { value: " ", label: "Spazio ( )" },
+  { value: "", label: "Nessuno" },
+];

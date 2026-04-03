@@ -33,6 +33,52 @@ export async function createTagAction(name: string, color: string) {
   }
 
   revalidatePath("/subjects");
+  revalidatePath("/settings");
+  return { success: true, tag };
+}
+
+export async function updateTagAction(tagId: string, name: string, color: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  const { roles } = currentUser;
+  const isOrgAdmin = roles.includes("user_manager");
+  const isSuperadmin = roles.includes("superadmin");
+
+  if (!isSuperadmin && !isOrgAdmin) {
+    return { error: "Non autorizzato" };
+  }
+
+  if (!name.trim()) return { error: "Nome tag obbligatorio" };
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("tags")
+    .select("organization_id")
+    .eq("id", tagId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Tag non trovato" };
+  }
+
+  const { data: tag, error } = await admin
+    .from("tags")
+    .update({ name: name.trim(), color: color || "#6366f1" })
+    .eq("id", tagId)
+    .select()
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "Un tag con questo nome esiste già" };
+    }
+    return { error: `Errore nell'aggiornamento: ${error.message}` };
+  }
+
+  revalidatePath("/subjects");
+  revalidatePath("/settings");
   return { success: true, tag };
 }
 
@@ -41,7 +87,7 @@ export async function deleteTagAction(tagId: string) {
   if (!currentUser) return { error: "Non autorizzato" };
 
   const { roles } = currentUser;
-  const isOrgAdmin = roles.includes("org_admin");
+  const isOrgAdmin = roles.includes("user_manager");
   const isSuperadmin = roles.includes("superadmin");
 
   if (!isSuperadmin && !isOrgAdmin) {
@@ -67,5 +113,6 @@ export async function deleteTagAction(tagId: string) {
   }
 
   revalidatePath("/subjects");
+  revalidatePath("/settings");
   return { success: true };
 }

@@ -6,12 +6,9 @@ import { Organization } from "@/types/supabase";
 import {
   toggleOrganizationAction,
   deleteOrganizationAction,
-  renameOrganizationAction,
 } from "@/app/actions/organizations";
 import { DataGrid } from "@/components/data-grid";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -21,7 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Pencil, Settings, Ban, RefreshCw, Trash2, X, Save } from "lucide-react";
+import { Settings, Ban, RefreshCw, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
@@ -32,10 +29,7 @@ interface Props {
 export function OrganizationsTable({ organizations }: Props) {
   const router = useRouter();
   const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null);
-  const [renameOrg, setRenameOrg] = useState<Organization | null>(null);
-  const [newName, setNewName] = useState("");
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isRenaming, setIsRenaming] = useState(false);
 
   async function handleToggle(orgId: string, currentActive: boolean) {
     const result = await toggleOrganizationAction(orgId, !currentActive);
@@ -45,21 +39,8 @@ export function OrganizationsTable({ organizations }: Props) {
       toast.success(
         currentActive ? "Organizzazione disattivata" : "Organizzazione riattivata"
       );
+      router.refresh();
     }
-  }
-
-  async function handleRename() {
-    if (!renameOrg) return;
-    setIsRenaming(true);
-    const result = await renameOrganizationAction(renameOrg.id, newName);
-    if (result.error) {
-      toast.error(result.error);
-    } else {
-      toast.success("Organizzazione rinominata");
-    }
-    setIsRenaming(false);
-    setRenameOrg(null);
-    setNewName("");
   }
 
   async function handleDelete() {
@@ -70,6 +51,7 @@ export function OrganizationsTable({ organizations }: Props) {
       toast.error(result.error);
     } else {
       toast.success("Organizzazione eliminata");
+      router.refresh();
     }
     setIsDeleting(false);
     setDeleteOrg(null);
@@ -113,17 +95,6 @@ export function OrganizationsTable({ organizations }: Props) {
           const org = params.data;
           return (
             <div className="flex items-center gap-2 h-full">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setRenameOrg(org);
-                  setNewName(org.name);
-                }}
-              >
-                <Pencil className="h-4 w-4 mr-1" />
-                Rinomina
-              </Button>
               <Button
                 variant="secondary"
                 size="sm"
@@ -181,16 +152,6 @@ export function OrganizationsTable({ organizations }: Props) {
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setRenameOrg(org);
-                  setNewName(org.name);
-                }}
-              >
-                Rinomina
-              </Button>
-              <Button
                 variant="secondary"
                 size="sm"
                 onClick={() => router.push(`/superadmin/organizations/${org.id}`)}
@@ -246,40 +207,6 @@ export function OrganizationsTable({ organizations }: Props) {
         </DialogContent>
       </Dialog>
 
-      <Dialog
-        open={!!renameOrg}
-        onOpenChange={(open) => {
-          if (!open) {
-            setRenameOrg(null);
-            setNewName("");
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Rinomina organizzazione</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <Label htmlFor="newName">Nuovo nome</Label>
-            <Input
-              id="newName"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleRename()}
-            />
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRenameOrg(null)}>
-              <X className="h-4 w-4 mr-1" />
-              Annulla
-            </Button>
-            <Button onClick={handleRename} disabled={isRenaming}>
-              <Save className="h-4 w-4 mr-1" />
-              {isRenaming ? "Salvataggio..." : "Salva"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </>
   );
 }

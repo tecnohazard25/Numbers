@@ -26,6 +26,10 @@ import { X, Building2 } from "lucide-react";
 import {
   SUPPORTED_LOCALES,
   CURRENCIES,
+  DATE_FORMATS,
+  TIME_FORMATS,
+  DECIMAL_SEPARATORS,
+  THOUSANDS_SEPARATORS,
   getLocaleDefaults,
   detectBrowserLocale,
 } from "@/lib/locale-defaults";
@@ -117,7 +121,9 @@ export default function NewOrganizationPage() {
                 <Label>Lingua</Label>
                 <Select value={locale} onValueChange={(v) => v && applyLocaleDefaults(v)}>
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue>
+                      {SUPPORTED_LOCALES.find((l) => l.value === locale)?.label ?? locale}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {SUPPORTED_LOCALES.map((l) => (
@@ -147,36 +153,74 @@ export default function NewOrganizationPage() {
 
               <div className="space-y-2">
                 <Label>Formato data</Label>
-                <Input
-                  value={dateFormat}
-                  onChange={(e) => setDateFormat(e.target.value)}
-                />
+                <Select value={dateFormat} onValueChange={(v) => v && setDateFormat(v)}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {DATE_FORMATS.find((f) => f.value === dateFormat)?.label ?? dateFormat}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DATE_FORMATS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label>Formato ora</Label>
-                <Input
-                  value={timeFormat}
-                  onChange={(e) => setTimeFormat(e.target.value)}
-                />
+                <Select value={timeFormat} onValueChange={(v) => v && setTimeFormat(v)}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {TIME_FORMATS.find((f) => f.value === timeFormat)?.label ?? timeFormat}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TIME_FORMATS.map((f) => (
+                      <SelectItem key={f.value} value={f.value}>
+                        {f.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label>Separatore decimale</Label>
-                <Input
-                  value={decimalSep}
-                  onChange={(e) => setDecimalSep(e.target.value)}
-                  maxLength={1}
-                />
+                <Select value={decimalSep} onValueChange={(v) => v && setDecimalSep(v)}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {DECIMAL_SEPARATORS.find((s) => s.value === decimalSep)?.label ?? decimalSep}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DECIMAL_SEPARATORS.map((s) => (
+                      <SelectItem key={s.value} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label>Separatore migliaia</Label>
-                <Input
-                  value={thousandsSep}
-                  onChange={(e) => setThousandsSep(e.target.value)}
-                  maxLength={1}
-                />
+                <Select value={thousandsSep} onValueChange={(v) => v !== null && setThousandsSep(v)}>
+                  <SelectTrigger>
+                    <SelectValue>
+                      {THOUSANDS_SEPARATORS.find((s) => s.value === thousandsSep)?.label ?? thousandsSep}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {THOUSANDS_SEPARATORS.map((s) => (
+                      <SelectItem key={s.value || "none"} value={s.value}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 

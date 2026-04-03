@@ -3,6 +3,7 @@
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentUser } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
+import { seedVatCodesForOrganization } from "@/app/actions/vat-codes";
 
 function generateSlug(name: string): string {
   return name
@@ -47,7 +48,7 @@ export async function createOrganizationAction(formData: FormData) {
   const thousands_separator = (formData.get("thousands_separator") as string) || ".";
 
   // Create organization
-  const { error: orgError } = await admin
+  const { data: org, error: orgError } = await admin
     .from("organizations")
     .insert({
       name,
@@ -58,11 +59,16 @@ export async function createOrganizationAction(formData: FormData) {
       time_format,
       decimal_separator,
       thousands_separator,
-    });
+    })
+    .select("id")
+    .single();
 
-  if (orgError) {
+  if (orgError || !org) {
     return { error: "Errore nella creazione dell'organizzazione" };
   }
+
+  // Seed default Italian VAT codes
+  await seedVatCodesForOrganization(org.id);
 
   revalidatePath("/superadmin");
   return { success: true };
