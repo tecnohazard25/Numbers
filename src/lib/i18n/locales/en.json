@@ -283,7 +283,9 @@
       "deactivated": "Deactivated",
       "noResourcesConfigured": "No collection resources configured.",
       "confirmDelete": "Confirm Deletion",
-      "confirmDeleteDesc": "Are you sure you want to delete the resource"
+      "confirmDeleteDesc": "Are you sure you want to delete the resource",
+      "seedDefault": "Populate with default resources",
+      "seedLoaded": "Default resources loaded"
     }
   },
   "users": {

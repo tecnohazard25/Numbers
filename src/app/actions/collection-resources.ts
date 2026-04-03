@@ -167,3 +167,43 @@ export async function deleteCollectionResourceAction(resourceId: string) {
   revalidatePath("/settings");
   return { success: true };
 }
+
+const DEFAULT_COLLECTION_RESOURCES: Omit<CollectionResourceInput, "iban">[] = [
+  { name: "Cassa Contanti", code: "CASSA", type: "cash" },
+  { name: "Conto Corrente Bancario", code: "CC01", type: "bank_account" },
+  { name: "POS", code: "POS", type: "other" },
+];
+
+export async function seedCollectionResourcesAction() {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  if (!canManageCollectionResources(currentUser.roles)) {
+    return { error: "Non autorizzato" };
+  }
+
+  const organizationId = currentUser.profile.organization_id;
+  if (!organizationId) return { error: "Organizzazione non trovata" };
+
+  const admin = createAdminClient();
+
+  const rows = DEFAULT_COLLECTION_RESOURCES
+    .filter((r) => r.type !== "bank_account")
+    .map((r) => ({
+      organization_id: organizationId,
+      name: r.name,
+      code: r.code,
+      type: r.type,
+      created_by: currentUser.profile.id,
+    }));
+
+  const { error } = await admin.from("collection_resources").insert(rows);
+
+  if (error) {
+    console.error("Error seeding collection resources:", error.message);
+    return { error: error.message };
+  }
+
+  revalidatePath("/settings");
+  return { success: true };
+}
