@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { SubjectForm } from "../../_components/subject-form";
+import { useTranslation } from "@/lib/i18n/context";
 import type { SubjectWithDetails, Tag } from "@/types/supabase";
 
 export default function EditSubjectPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const subjectId = params.id as string;
 
@@ -20,7 +22,7 @@ export default function EditSubjectPage() {
         // Fetch subject
         const subjectRes = await fetch(`/api/subjects/${subjectId}`);
         if (!subjectRes.ok) {
-          setError("Soggetto non trovato");
+          setError(t("subjects.subjectNotFound"));
           setLoading(false);
           return;
         }
@@ -37,20 +39,20 @@ export default function EditSubjectPage() {
           setTags(tagsData.tags ?? []);
         }
       } catch {
-        setError("Errore nel caricamento");
+        setError(t("subjects.loadError"));
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, [subjectId]);
+  }, [subjectId, t]);
 
   if (loading) {
-    return <p className="text-muted-foreground">Caricamento...</p>;
+    return <p className="text-muted-foreground">{t("common.loading")}</p>;
   }
 
   if (error || !subject) {
-    return <p className="text-destructive">{error ?? "Soggetto non trovato"}</p>;
+    return <p className="text-destructive">{error ?? t("subjects.subjectNotFound")}</p>;
   }
 
   return <SubjectForm initialData={subject} tags={tags} />;

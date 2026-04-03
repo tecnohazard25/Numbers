@@ -12,9 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PASSWORD_REQUIREMENTS } from "@/lib/password";
+import { PASSWORD_REQUIREMENTS_KEY } from "@/lib/password";
+import { I18nProvider, useTranslation } from "@/lib/i18n/context";
+import { detectBrowserLocale } from "@/lib/locale-defaults";
 
-export default function ResetPasswordPage() {
+function ResetPasswordContent() {
+  const { t } = useTranslation();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,8 +35,8 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Nuova Password</CardTitle>
-          <CardDescription>Inserisci la tua nuova password</CardDescription>
+          <CardTitle className="text-2xl">{t("auth.newPasswordTitle")}</CardTitle>
+          <CardDescription>{t("auth.newPasswordDesc")}</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -43,14 +46,14 @@ export default function ResetPasswordPage() {
           )}
           <form action={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="password">Nuova Password</Label>
+              <Label htmlFor="password">{t("auth.newPassword")}</Label>
               <Input id="password" name="password" type="password" required />
               <p className="text-xs text-muted-foreground">
-                {PASSWORD_REQUIREMENTS}
+                {t(PASSWORD_REQUIREMENTS_KEY)}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Conferma Password</Label>
+              <Label htmlFor="confirmPassword">{t("auth.confirmPassword")}</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -59,11 +62,20 @@ export default function ResetPasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Aggiornamento..." : "Aggiorna Password"}
+              {isLoading ? t("auth.updating") : t("auth.updatePassword")}
             </Button>
           </form>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  const [locale] = useState(() => detectBrowserLocale());
+  return (
+    <I18nProvider locale={locale}>
+      <ResetPasswordContent />
+    </I18nProvider>
   );
 }

@@ -33,15 +33,9 @@ import {
   deleteSubjectAction,
   toggleSubjectAction,
 } from "@/app/actions/subjects";
+import { useTranslation } from "@/lib/i18n/context";
 import type { SubjectWithDetails, Tag, SubjectType } from "@/types/supabase";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
-
-const TYPE_LABELS: Record<SubjectType, string> = {
-  person: "Persona fisica",
-  company: "Azienda",
-  sole_trader: "Ditta individuale",
-  public_administration: "P.A.",
-};
 
 const TYPE_COLORS: Record<SubjectType, string> = {
   person: "default",
@@ -86,6 +80,7 @@ function getPrimaryContact(s: SubjectWithDetails): string {
 
 export default function SubjectsPage() {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const [subjects, setSubjects] = useState<SubjectWithDetails[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
@@ -99,6 +94,13 @@ export default function SubjectsPage() {
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<SubjectWithDetails | null>(null);
+
+  const TYPE_LABELS: Record<SubjectType, string> = useMemo(() => ({
+    person: t("subjects.person"),
+    company: t("subjects.company"),
+    sole_trader: t("subjects.soleTrader"),
+    public_administration: t("subjects.publicAdminShort"),
+  }), [t]);
 
   const loadData = useCallback(async () => {
     try {
@@ -130,6 +132,7 @@ export default function SubjectsPage() {
     } finally {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [typeFilter, tagFilter, searchText]);
 
   useEffect(() => {
@@ -142,7 +145,7 @@ export default function SubjectsPage() {
       toast.error(result.error);
     } else {
       toast.success(
-        subject.is_active ? "Soggetto disattivato" : "Soggetto riattivato"
+        subject.is_active ? t("subjects.deactivated") : t("subjects.reactivated")
       );
       loadData();
     }
@@ -154,7 +157,7 @@ export default function SubjectsPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Soggetto eliminato");
+      toast.success(t("subjects.deleted"));
       setDeleteDialogOpen(false);
       setDeleteTarget(null);
       loadData();
@@ -164,14 +167,14 @@ export default function SubjectsPage() {
   const columnDefs = useMemo<ColDef<SubjectWithDetails>[]>(
     () => [
       {
-        headerName: "Nome",
+        headerName: t("common.name"),
         valueGetter: (params) =>
           params.data ? getSubjectName(params.data) : "",
         filter: "agTextColumnFilter",
         minWidth: 180,
       },
       {
-        headerName: "Tipo",
+        headerName: t("subjects.type"),
         field: "type",
         filter: "agTextColumnFilter",
         minWidth: 130,
@@ -189,32 +192,32 @@ export default function SubjectsPage() {
           params.value ? TYPE_LABELS[params.value as SubjectType] : "",
       },
       {
-        headerName: "Indirizzo",
+        headerName: t("subjects.address"),
         valueGetter: (params) =>
           params.data ? getPrimaryAddress(params.data) : "",
         filter: "agTextColumnFilter",
         minWidth: 200,
       },
       {
-        headerName: "Contatti",
+        headerName: t("subjects.contactsColumn"),
         valueGetter: (params) =>
           params.data ? getPrimaryContact(params.data) : "",
         filter: "agTextColumnFilter",
         minWidth: 200,
       },
       {
-        headerName: "Data di nascita",
+        headerName: t("subjects.birthDate"),
         field: "birth_date",
         filter: "agTextColumnFilter",
         minWidth: 120,
         valueFormatter: (params) => {
           if (!params.data || params.data.type !== "person" || !params.value)
             return "";
-          return new Date(params.value).toLocaleDateString("it-IT");
+          return new Date(params.value).toLocaleDateString(locale);
         },
       },
       {
-        headerName: "Tag",
+        headerName: t("subjects.tags"),
         valueGetter: (params) =>
           params.data?.subject_tags
             ?.map((st) => st.tags?.name)
@@ -244,7 +247,7 @@ export default function SubjectsPage() {
       ...(canWrite
         ? [
             {
-              headerName: "Azioni",
+              headerName: t("common.actions"),
               sortable: false,
               filter: false,
               resizable: false,
@@ -263,7 +266,7 @@ export default function SubjectsPage() {
                       onClick={() => router.push(`/subjects/${s.id}/edit`)}
                     >
                       <Pencil className="h-3 w-3 mr-1" />
-                      Modifica
+                      {t("common.edit")}
                     </Button>
                     <Button
                       variant="outline"
@@ -293,7 +296,7 @@ export default function SubjectsPage() {
           ]
         : []),
     ],
-    [canWrite, router]
+    [canWrite, router, t, locale, TYPE_LABELS]
   );
 
   if (loading) {
@@ -301,9 +304,9 @@ export default function SubjectsPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" />
-          Soggetti
+          {t("subjects.title")}
         </h1>
-        <p className="text-muted-foreground">Caricamento...</p>
+        <p className="text-muted-foreground">{t("common.loading")}</p>
       </div>
     );
   }
@@ -314,12 +317,12 @@ export default function SubjectsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" />
-          Soggetti
+          {t("subjects.title")}
         </h1>
         {canWrite && (
           <Button onClick={() => router.push("/subjects/new")}>
             <Plus className="h-4 w-4 mr-2" />
-            Nuovo Soggetto
+            {t("subjects.newSubject")}
           </Button>
         )}
       </div>
@@ -331,36 +334,36 @@ export default function SubjectsPage() {
           <Input
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
-            placeholder="Cerca per nome, ragione sociale, CF, P.IVA..."
+            placeholder={t("subjects.searchPlaceholder")}
             className="pl-8"
           />
         </div>
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tipo">
+            <SelectValue placeholder={t("subjects.type")}>
               {typeFilter === "all"
-                ? "Tutti i tipi"
+                ? t("subjects.allTypes")
                 : TYPE_LABELS[typeFilter as SubjectType] ?? typeFilter}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutti i tipi</SelectItem>
-            <SelectItem value="person">Persona fisica</SelectItem>
-            <SelectItem value="company">Azienda</SelectItem>
-            <SelectItem value="sole_trader">Ditta individuale</SelectItem>
-            <SelectItem value="public_administration">P.A.</SelectItem>
+            <SelectItem value="all">{t("subjects.allTypes")}</SelectItem>
+            <SelectItem value="person">{t("subjects.person")}</SelectItem>
+            <SelectItem value="company">{t("subjects.company")}</SelectItem>
+            <SelectItem value="sole_trader">{t("subjects.soleTrader")}</SelectItem>
+            <SelectItem value="public_administration">{t("subjects.publicAdminShort")}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={tagFilter} onValueChange={(v) => setTagFilter(v ?? "all")}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tag">
+            <SelectValue placeholder={t("subjects.tags")}>
               {tagFilter === "all"
-                ? "Tutti i tag"
-                : tags.find((t) => t.id === tagFilter)?.name ?? tagFilter}
+                ? t("subjects.allTags")
+                : tags.find((tg) => tg.id === tagFilter)?.name ?? tagFilter}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tutti i tag</SelectItem>
+            <SelectItem value="all">{t("subjects.allTags")}</SelectItem>
             {tags.map((tag) => (
               <SelectItem key={tag.id} value={tag.id}>
                 <span className="flex items-center gap-1.5">
@@ -403,8 +406,8 @@ export default function SubjectsPage() {
             )}
             {subject.type === "person" && subject.birth_date && (
               <div className="text-sm text-muted-foreground">
-                Nato il{" "}
-                {new Date(subject.birth_date).toLocaleDateString("it-IT")}
+                {t("subjects.bornOn")}{" "}
+                {new Date(subject.birth_date).toLocaleDateString(locale)}
               </div>
             )}
             {subject.subject_tags?.length > 0 && (
@@ -434,7 +437,7 @@ export default function SubjectsPage() {
                   onClick={() => router.push(`/subjects/${subject.id}/edit`)}
                 >
                   <Pencil className="h-3 w-3 mr-1" />
-                  Modifica
+                  {t("common.edit")}
                 </Button>
                 <Button
                   variant="outline"
@@ -467,25 +470,25 @@ export default function SubjectsPage() {
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Conferma Eliminazione</DialogTitle>
+            <DialogTitle>{t("subjects.confirmDelete")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Sei sicuro di voler eliminare{" "}
+            {t("subjects.confirmDeleteDesc")}{" "}
             <strong>
               {deleteTarget ? getSubjectName(deleteTarget) : ""}
             </strong>
-            ? Questa azione non può essere annullata.
+            ? {t("subjects.cannotBeUndone")}
           </p>
           <div className="flex justify-end gap-3 mt-4">
             <Button
               variant="outline"
               onClick={() => setDeleteDialogOpen(false)}
             >
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
               <Trash2 className="h-4 w-4 mr-1" />
-              Elimina
+              {t("common.delete")}
             </Button>
           </div>
         </DialogContent>

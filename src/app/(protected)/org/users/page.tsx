@@ -35,6 +35,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import { Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserPlus, X } from "lucide-react";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 import { ROLE_LABELS } from "@/lib/roles";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface User {
   id: string;
@@ -47,11 +48,12 @@ interface User {
 }
 
 const AVAILABLE_ROLES = [
-  { name: "business_analyst", label: "Business Analyst" },
-  { name: "accountant", label: "Contabile" },
+  { name: "business_analyst", label: "roles.businessAnalyst" },
+  { name: "accountant", label: "roles.accountant" },
 ];
 
 export default function OrgUsersPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,7 +122,7 @@ export default function OrgUsersPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente aggiornato");
+      toast.success(t("users.updated"));
       setEditUser(null);
       loadData();
     }
@@ -133,7 +135,7 @@ export default function OrgUsersPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente creato con successo");
+      toast.success(t("users.created"));
       setCreateDialogOpen(false);
       loadData();
     }
@@ -145,7 +147,7 @@ export default function OrgUsersPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(currentActive ? "Utente disattivato" : "Utente riattivato");
+      toast.success(currentActive ? t("users.deactivated") : t("users.reactivated"));
       loadData();
     }
   }
@@ -157,7 +159,7 @@ export default function OrgUsersPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente eliminato");
+      toast.success(t("users.deleted"));
       loadData();
     }
     setIsSubmitting(false);
@@ -167,30 +169,30 @@ export default function OrgUsersPage() {
   const columnDefs = useMemo<ColDef<User>[]>(
     () => [
       {
-        headerName: "Nome",
+        headerName: t("common.name"),
         valueGetter: (params) =>
           params.data ? `${params.data.first_name} ${params.data.last_name}` : "",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Email",
+        headerName: t("common.email"),
         field: "email",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Ruoli",
+        headerName: t("common.roles"),
         valueGetter: (params) =>
-          params.data?.user_roles?.map((ur) => ROLE_LABELS[ur.roles.name] ?? ur.roles.name).join(", ") ?? "",
+          params.data?.user_roles?.map((ur) => t(ROLE_LABELS[ur.roles.name] ?? ur.roles.name)).join(", ") ?? "",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Stato",
+        headerName: t("common.status"),
         field: "is_active",
         filter: "agTextColumnFilter",
-        valueFormatter: (params) => (params.value ? "Attivo" : "Disattivo"),
+        valueFormatter: (params) => (params.value ? t("common.active") : t("common.inactive")),
       },
       {
-        headerName: "Azioni",
+        headerName: t("common.actions"),
         sortable: false,
         filter: false,
         resizable: false,
@@ -207,7 +209,7 @@ export default function OrgUsersPage() {
                     <Pencil className="h-4 w-4" />
                   </Button>
                 } />
-                <TooltipContent>Modifica</TooltipContent>
+                <TooltipContent>{t("common.edit")}</TooltipContent>
               </Tooltip>
               <Button
                 variant="outline"
@@ -215,9 +217,9 @@ export default function OrgUsersPage() {
                 onClick={() => handleToggle(user.id, user.is_active)}
               >
                 {user.is_active ? (
-                  <><Ban className="h-4 w-4 mr-1" />Disattiva</>
+                  <><Ban className="h-4 w-4 mr-1" />{t("common.deactivate")}</>
                 ) : (
-                  <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
+                  <><RefreshCw className="h-4 w-4 mr-1" />{t("common.reactivate")}</>
                 )}
               </Button>
               <Tooltip>
@@ -230,7 +232,7 @@ export default function OrgUsersPage() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 } />
-                <TooltipContent>Elimina</TooltipContent>
+                <TooltipContent>{t("common.delete")}</TooltipContent>
               </Tooltip>
             </div>
           );
@@ -238,13 +240,13 @@ export default function OrgUsersPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [t]
   );
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Caricamento...</p>
+        <p className="text-muted-foreground">{t("common.loading")}</p>
       </div>
     );
   }
@@ -255,45 +257,45 @@ export default function OrgUsersPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>Utenti</CardTitle>
+              <CardTitle>{t("users.title")}</CardTitle>
               <CardDescription>
-                {users.length} utenti nella tua organizzazione
+                {users.length} {t("users.usersInOrg")}
               </CardDescription>
             </div>
             <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
               <DialogTrigger render={<Button />}>
                 <Plus className="h-4 w-4 mr-2" />
-                Nuovo Utente
+                {t("users.newUser")}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crea Nuovo Utente</DialogTitle>
+                  <DialogTitle>{t("users.createNewUser")}</DialogTitle>
                   <DialogDescription>
-                    L&apos;utente riceverà un invito via email
+                    {t("users.userWillReceiveInvite")}
                   </DialogDescription>
                 </DialogHeader>
                 <form action={handleCreateUser} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Nome</Label>
+                      <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
                       <Input id="firstName" name="firstName" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Cognome</Label>
+                      <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
                       <Input id="lastName" name="lastName" required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("common.email")}</Label>
                     <Input id="email" name="email" type="email" required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ruoli</Label>
+                    <Label>{t("common.roles")}</Label>
                     <div className="space-y-2">
                       {AVAILABLE_ROLES.map((role) => (
                         <label key={role.name} className="flex items-center gap-2 text-sm">
                           <input type="checkbox" name="roles" value={role.name} className="rounded" />
-                          {role.label}
+                          {t(role.label)}
                         </label>
                       ))}
                     </div>
@@ -301,11 +303,11 @@ export default function OrgUsersPage() {
                   <DialogFooter>
                     <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
                       <X className="h-4 w-4 mr-1" />
-                      Annulla
+                      {t("common.cancel")}
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
                       <UserPlus className="h-4 w-4 mr-1" />
-                      {isSubmitting ? "Creazione..." : "Crea Utente"}
+                      {isSubmitting ? t("common.creating") : t("users.createUser")}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -325,23 +327,23 @@ export default function OrgUsersPage() {
                     {user.first_name} {user.last_name}
                   </span>
                   <Badge variant={user.is_active ? "default" : "secondary"}>
-                    {user.is_active ? "Attivo" : "Disattivo"}
+                    {user.is_active ? t("common.active") : t("common.inactive")}
                   </Badge>
                 </div>
                 <div className="text-sm text-muted-foreground">{user.email}</div>
                 <div className="flex gap-1 flex-wrap">
                   {user.user_roles.map((ur) => (
                     <Badge key={ur.roles.name} variant="outline">
-                      {ROLE_LABELS[ur.roles.name] ?? ur.roles.name}
+                      {t(ROLE_LABELS[ur.roles.name] ?? ur.roles.name)}
                     </Badge>
                   ))}
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                    <Pencil className="h-4 w-4 mr-1" /> Modifica
+                    <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => handleToggle(user.id, user.is_active)}>
-                    {user.is_active ? "Disattiva" : "Riattiva"}
+                    {user.is_active ? t("common.deactivate") : t("common.reactivate")}
                   </Button>
                   <Button variant="destructive" size="sm" onClick={() => setDeleteUser(user)}>
                     <Trash2 className="h-4 w-4" />
@@ -365,23 +367,23 @@ export default function OrgUsersPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifica Utente</DialogTitle>
+            <DialogTitle>{t("users.editUser")}</DialogTitle>
             <DialogDescription>{editUser?.email}</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nome</Label>
+                <Label>{t("subjects.firstName")}</Label>
                 <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Cognome</Label>
+                <Label>{t("subjects.lastName")}</Label>
                 <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Ruoli</Label>
+              <Label>{t("common.roles")}</Label>
               <div className="space-y-2">
                 {AVAILABLE_ROLES.map((role) => (
                   <label key={role.name} className="flex items-center gap-2 text-sm">
@@ -397,7 +399,7 @@ export default function OrgUsersPage() {
                       }}
                       className="rounded"
                     />
-                    {role.label}
+                    {t(role.label)}
                   </label>
                 ))}
               </div>
@@ -406,7 +408,7 @@ export default function OrgUsersPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label>Scadenza password</Label>
+              <Label>{t("users.passwordExpiry")}</Label>
               <Input
                 type="date"
                 value={editPasswordExpiry}
@@ -417,26 +419,26 @@ export default function OrgUsersPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label>Imposta nuova password</Label>
+              <Label>{t("users.setNewPassword")}</Label>
               <Input
                 type="password"
                 value={editNewPassword}
                 onChange={(e) => setEditNewPassword(e.target.value)}
-                placeholder="Lascia vuoto per non modificare"
+                placeholder={t("users.leaveEmptyToKeep")}
               />
               <p className="text-xs text-muted-foreground">
-                Se impostata, la password risulterà scaduta e l&apos;utente dovrà cambiarla al primo accesso.
+                {t("users.passwordExpiryNote")}
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSubmitting}>
               <Save className="h-4 w-4 mr-1" />
-              {isSubmitting ? "Salvataggio..." : "Salva"}
+              {isSubmitting ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -446,21 +448,21 @@ export default function OrgUsersPage() {
       <Dialog open={!!deleteUser} onOpenChange={(open) => !open && setDeleteUser(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Conferma eliminazione</DialogTitle>
+            <DialogTitle>{t("users.confirmDelete")}</DialogTitle>
             <DialogDescription>
-              Sei sicuro di voler eliminare l&apos;utente{" "}
+              {t("users.confirmDeleteDesc")}{" "}
               <strong>{deleteUser?.first_name} {deleteUser?.last_name}</strong>?
-              Questa azione è irreversibile.
+              {" "}{t("users.irreversible")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteUser(null)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button variant="destructive" onClick={handleDelete} disabled={isSubmitting}>
               <Trash2 className="h-4 w-4 mr-1" />
-              {isSubmitting ? "Eliminazione..." : "Elimina"}
+              {isSubmitting ? t("common.deleting") : t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { EyeOff } from "lucide-react";
 import { useState } from "react";
+import { useTranslation } from "@/lib/i18n/context";
 
 interface ImpersonationBannerProps {
   name: string;
@@ -11,6 +12,7 @@ interface ImpersonationBannerProps {
 
 export function ImpersonationBanner({ name, email }: ImpersonationBannerProps) {
   const [isRestoring, setIsRestoring] = useState(false);
+  const { t } = useTranslation();
 
   async function handleStop() {
     setIsRestoring(true);
@@ -37,7 +39,7 @@ export function ImpersonationBanner({ name, email }: ImpersonationBannerProps) {
   return (
     <div className="bg-amber-600 text-white px-4 py-2 flex items-center justify-between gap-2 text-sm">
       <span>
-        Stai impersonando <strong>{name || email}</strong>
+        {t("impersonation.impersonating", { name: name || email })}
       </span>
       <Button
         variant="outline"
@@ -47,7 +49,7 @@ export function ImpersonationBanner({ name, email }: ImpersonationBannerProps) {
         disabled={isRestoring}
       >
         <EyeOff className="h-4 w-4 mr-1" />
-        {isRestoring ? "Ripristino..." : "Torna a Superadmin"}
+        {isRestoring ? t("impersonation.restoring") : t("impersonation.backToSuperadmin")}
       </Button>
     </div>
   );

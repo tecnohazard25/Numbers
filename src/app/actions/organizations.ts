@@ -39,13 +39,8 @@ export async function createOrganizationAction(formData: FormData) {
     return { error: "Slug già in uso" };
   }
 
-  // Locale settings from form
-  const locale = (formData.get("locale") as string) || "it-IT";
+  // Settings from form
   const currency = (formData.get("currency") as string) || "EUR";
-  const date_format = (formData.get("date_format") as string) || "dd/MM/yyyy";
-  const time_format = (formData.get("time_format") as string) || "HH:mm";
-  const decimal_separator = (formData.get("decimal_separator") as string) || ",";
-  const thousands_separator = (formData.get("thousands_separator") as string) || ".";
 
   // Create organization
   const { data: org, error: orgError } = await admin
@@ -53,12 +48,7 @@ export async function createOrganizationAction(formData: FormData) {
     .insert({
       name,
       slug,
-      locale,
       currency,
-      date_format,
-      time_format,
-      decimal_separator,
-      thousands_separator,
     })
     .select("id")
     .single();
@@ -126,12 +116,7 @@ export async function toggleOrganizationAction(
 export async function updateOrganizationSettingsAction(
   orgId: string,
   settings: {
-    locale: string;
     currency: string;
-    date_format: string;
-    time_format: string;
-    decimal_separator: string;
-    thousands_separator: string;
   }
 ) {
   const currentUser = await getCurrentUser();

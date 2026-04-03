@@ -20,6 +20,7 @@ import {
 import { toast } from "sonner";
 import { Settings, Ban, RefreshCw, Trash2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useTranslation } from "@/lib/i18n/context";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
 interface Props {
@@ -28,6 +29,7 @@ interface Props {
 
 export function OrganizationsTable({ organizations }: Props) {
   const router = useRouter();
+  const { t, locale } = useTranslation();
   const [deleteOrg, setDeleteOrg] = useState<Organization | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -37,7 +39,7 @@ export function OrganizationsTable({ organizations }: Props) {
       toast.error(result.error);
     } else {
       toast.success(
-        currentActive ? "Organizzazione disattivata" : "Organizzazione riattivata"
+        currentActive ? t("orgs.deactivated") : t("orgs.reactivated")
       );
       router.refresh();
     }
@@ -50,7 +52,7 @@ export function OrganizationsTable({ organizations }: Props) {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Organizzazione eliminata");
+      toast.success(t("orgs.deleted"));
       router.refresh();
     }
     setIsDeleting(false);
@@ -60,31 +62,31 @@ export function OrganizationsTable({ organizations }: Props) {
   const columnDefs = useMemo<ColDef<Organization>[]>(
     () => [
       {
-        headerName: "Nome",
+        headerName: t("common.name"),
         field: "name",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Stato",
+        headerName: t("common.status"),
         field: "is_active",
         filter: "agTextColumnFilter",
         cellRenderer: (params: ICellRendererParams<Organization>) => {
           if (params.value == null) return null;
-          return params.value ? "Attiva" : "Disattiva";
+          return params.value ? t("common.activeF") : t("common.inactiveF");
         },
-        valueFormatter: (params) => (params.value ? "Attiva" : "Disattiva"),
+        valueFormatter: (params) => (params.value ? t("common.activeF") : t("common.inactiveF")),
       },
       {
-        headerName: "Creata il",
+        headerName: t("orgs.createdOn"),
         field: "created_at",
         filter: "agDateColumnFilter",
         valueFormatter: (params) =>
           params.value
-            ? new Date(params.value).toLocaleDateString("it-IT")
+            ? new Date(params.value).toLocaleDateString(locale)
             : "",
       },
       {
-        headerName: "Azioni",
+        headerName: t("common.actions"),
         sortable: false,
         filter: false,
         resizable: false,
@@ -103,7 +105,7 @@ export function OrganizationsTable({ organizations }: Props) {
                 }
               >
                 <Settings className="h-4 w-4 mr-1" />
-                Gestisci
+                {t("orgs.manageOrg")}
               </Button>
               <Button
                 variant="outline"
@@ -111,9 +113,9 @@ export function OrganizationsTable({ organizations }: Props) {
                 onClick={() => handleToggle(org.id, org.is_active)}
               >
                 {org.is_active ? (
-                  <><Ban className="h-4 w-4 mr-1" />Disattiva</>
+                  <><Ban className="h-4 w-4 mr-1" />{t("common.deactivate")}</>
                 ) : (
-                  <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
+                  <><RefreshCw className="h-4 w-4 mr-1" />{t("common.reactivate")}</>
                 )}
               </Button>
               <Button
@@ -122,7 +124,7 @@ export function OrganizationsTable({ organizations }: Props) {
                 onClick={() => setDeleteOrg(org)}
               >
                 <Trash2 className="h-4 w-4 mr-1" />
-                Elimina
+                {t("common.delete")}
               </Button>
             </div>
           );
@@ -130,7 +132,7 @@ export function OrganizationsTable({ organizations }: Props) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [t, locale]
   );
 
   return (
@@ -144,11 +146,11 @@ export function OrganizationsTable({ organizations }: Props) {
             <div className="flex items-center justify-between">
               <span className="font-medium">{org.name}</span>
               <Badge variant={org.is_active ? "default" : "secondary"}>
-                {org.is_active ? "Attiva" : "Disattiva"}
+                {org.is_active ? t("common.activeF") : t("common.inactiveF")}
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">
-              Creata: {new Date(org.created_at).toLocaleDateString("it-IT")}
+              {t("orgs.createdAt")} {new Date(org.created_at).toLocaleDateString(locale)}
             </div>
             <div className="flex gap-2 flex-wrap">
               <Button
@@ -156,21 +158,21 @@ export function OrganizationsTable({ organizations }: Props) {
                 size="sm"
                 onClick={() => router.push(`/superadmin/organizations/${org.id}`)}
               >
-                Gestisci
+                {t("orgs.manageOrg")}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleToggle(org.id, org.is_active)}
               >
-                {org.is_active ? "Disattiva" : "Riattiva"}
+                {org.is_active ? t("common.deactivate") : t("common.reactivate")}
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setDeleteOrg(org)}
               >
-                Elimina
+                {t("common.delete")}
               </Button>
             </div>
           </div>
@@ -183,17 +185,17 @@ export function OrganizationsTable({ organizations }: Props) {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Conferma eliminazione</DialogTitle>
+            <DialogTitle>{t("orgs.confirmDelete")}</DialogTitle>
             <DialogDescription>
-              Sei sicuro di voler eliminare l&apos;organizzazione{" "}
-              <strong>{deleteOrg?.name}</strong>? Tutti gli utenti associati
-              verranno eliminati. Questa azione è irreversibile.
+              {t("orgs.confirmDeleteDesc")}{" "}
+              <strong>{deleteOrg?.name}</strong>?{" "}
+              {t("orgs.allUsersDeleted")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteOrg(null)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -201,7 +203,7 @@ export function OrganizationsTable({ organizations }: Props) {
               disabled={isDeleting}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              {isDeleting ? "Eliminazione..." : "Elimina"}
+              {isDeleting ? t("common.deleting") : t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

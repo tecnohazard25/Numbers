@@ -12,9 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { PASSWORD_REQUIREMENTS } from "@/lib/password";
+import { PASSWORD_REQUIREMENTS_KEY } from "@/lib/password";
+import { I18nProvider, useTranslation } from "@/lib/i18n/context";
+import { detectBrowserLocale } from "@/lib/locale-defaults";
 
-export default function ForceChangePasswordPage() {
+function ForceChangePasswordContent() {
+  const { t } = useTranslation();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -32,9 +35,9 @@ export default function ForceChangePasswordPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Password Scaduta</CardTitle>
+          <CardTitle className="text-2xl">{t("auth.passwordExpired")}</CardTitle>
           <CardDescription>
-            La tua password è scaduta. Devi cambiarla per continuare.
+            {t("auth.passwordExpiredDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -45,7 +48,7 @@ export default function ForceChangePasswordPage() {
           )}
           <form action={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Password Attuale</Label>
+              <Label htmlFor="currentPassword">{t("auth.currentPassword")}</Label>
               <Input
                 id="currentPassword"
                 name="currentPassword"
@@ -54,7 +57,7 @@ export default function ForceChangePasswordPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newPassword">Nuova Password</Label>
+              <Label htmlFor="newPassword">{t("auth.newPassword")}</Label>
               <Input
                 id="newPassword"
                 name="newPassword"
@@ -62,11 +65,11 @@ export default function ForceChangePasswordPage() {
                 required
               />
               <p className="text-xs text-muted-foreground">
-                {PASSWORD_REQUIREMENTS}
+                {t(PASSWORD_REQUIREMENTS_KEY)}
               </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Conferma Nuova Password</Label>
+              <Label htmlFor="confirmPassword">{t("auth.confirmNewPassword")}</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -75,11 +78,20 @@ export default function ForceChangePasswordPage() {
               />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Aggiornamento..." : "Cambia Password"}
+              {isLoading ? t("auth.updating") : t("auth.changePassword")}
             </Button>
           </form>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function ForceChangePasswordPage() {
+  const [locale] = useState(() => detectBrowserLocale());
+  return (
+    <I18nProvider locale={locale}>
+      <ForceChangePasswordContent />
+    </I18nProvider>
   );
 }

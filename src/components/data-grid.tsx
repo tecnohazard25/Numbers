@@ -14,6 +14,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { useTranslation } from "@/lib/i18n/context";
+import { getAgGridLocale } from "@/lib/i18n/ag-grid";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
 
@@ -33,71 +35,6 @@ const darkTheme = themeQuartz.withParams({
   headerFontSize: 13,
   borderRadius: 8,
 });
-
-const AG_GRID_LOCALE_IT: Record<string, string> = {
-  page: "Pagina",
-  more: "Altro",
-  to: "a",
-  of: "di",
-  next: "Successivo",
-  last: "Ultimo",
-  first: "Primo",
-  previous: "Precedente",
-  loadingOoo: "Caricamento...",
-  noRowsToShow: "Nessun dato da mostrare",
-  filterOoo: "Filtra...",
-  applyFilter: "Applica",
-  resetFilter: "Reimposta",
-  clearFilter: "Cancella",
-  equals: "Uguale",
-  notEqual: "Diverso",
-  lessThan: "Minore di",
-  greaterThan: "Maggiore di",
-  contains: "Contiene",
-  notContains: "Non contiene",
-  startsWith: "Inizia con",
-  endsWith: "Finisce con",
-  blank: "Vuoto",
-  notBlank: "Non vuoto",
-  andCondition: "E",
-  orCondition: "O",
-  selectAll: "Seleziona tutto",
-  searchOoo: "Cerca...",
-  columns: "Colonne",
-  filters: "Filtri",
-  pivotMode: "Modalità Pivot",
-  groups: "Gruppi",
-  values: "Valori",
-  rowGroupColumnsEmptyMessage: "Trascina qui per raggruppare",
-  valueColumnsEmptyMessage: "Trascina qui per aggregare",
-  pivotColumnsEmptyMessage: "Trascina qui per pivot",
-  group: "Gruppo",
-  export: "Esporta",
-  csvExport: "Esporta CSV",
-  excelExport: "Esporta Excel",
-  pinColumn: "Blocca colonna",
-  pinLeft: "Blocca a sinistra",
-  pinRight: "Blocca a destra",
-  noPin: "Sblocca",
-  autosizeThisColumn: "Adatta colonna",
-  autosizeAllColumns: "Adatta tutte",
-  groupBy: "Raggruppa per",
-  ungroupBy: "Rimuovi raggruppamento",
-  resetColumns: "Reimposta colonne",
-  expandAll: "Espandi tutto",
-  collapseAll: "Comprimi tutto",
-  sum: "Somma",
-  min: "Min",
-  max: "Max",
-  count: "Conteggio",
-  avg: "Media",
-  copy: "Copia",
-  copyWithHeaders: "Copia con intestazioni",
-  paste: "Incolla",
-  ctrlC: "Ctrl+C",
-  ctrlX: "Ctrl+X",
-  ctrlV: "Ctrl+V",
-};
 
 interface DataGridProps<T> {
   rowData: T[];
@@ -124,6 +61,8 @@ export function DataGrid<T>({
   const gridRef = useRef<AgGridReact<T>>(null);
   const gridApiRef = useRef<GridApi<T> | null>(null);
   const isMobile = useIsMobile();
+  const { t, lang } = useTranslation();
+  const agGridLocale = useMemo(() => getAgGridLocale(lang), [lang]);
 
   const defaultColDef = useMemo<ColDef<T>>(
     () => ({
@@ -233,12 +172,12 @@ export function DataGrid<T>({
         <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-1" />
-            Esporta Excel
+            {t("common.exportExcel")}
           </Button>
         </div>
         {rowData.length === 0 ? (
           <p className="text-muted-foreground text-center py-8">
-            Nessun dato da mostrare
+            {t("common.noData")}
           </p>
         ) : (
           <div className="space-y-3">
@@ -266,7 +205,7 @@ export function DataGrid<T>({
           columnDefs={columnDefs}
           defaultColDef={defaultColDef}
           domLayout={domLayout}
-          localeText={AG_GRID_LOCALE_IT}
+          localeText={agGridLocale}
           onGridReady={onGridReady}
           animateRows={true}
           pagination={pagination}

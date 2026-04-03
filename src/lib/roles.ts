@@ -1,8 +1,8 @@
 export const ROLE_LABELS: Record<string, string> = {
-  superadmin: "Super Admin",
-  user_manager: "Gestione Utenti",
-  business_analyst: "Business Analyst",
-  accountant: "Contabile",
+  superadmin: "roles.superadmin",
+  user_manager: "roles.userManager",
+  business_analyst: "roles.businessAnalyst",
+  accountant: "roles.accountant",
 };
 
 export function getRoleLabel(roleName: string): string {

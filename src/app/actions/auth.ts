@@ -2,7 +2,9 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { validatePassword } from "@/lib/password";
 
 export async function loginAction(formData: FormData) {
@@ -200,4 +202,29 @@ export async function forceChangePasswordAction(formData: FormData) {
   } else {
     redirect("/dashboard");
   }
+}
+
+export async function updateProfileSettingsAction(settings: {
+  locale: string;
+  date_format: string;
+  time_format: string;
+  decimal_separator: string;
+  thousands_separator: string;
+}) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  const admin = createAdminClient();
+
+  const { error } = await admin
+    .from("profiles")
+    .update(settings)
+    .eq("id", currentUser.profile.id);
+
+  if (error) {
+    return { error: "Errore nel salvataggio delle impostazioni" };
+  }
+
+  revalidatePath("/change-password");
+  return { success: true };
 }

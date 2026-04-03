@@ -3,12 +3,7 @@ export type Organization = {
   name: string;
   slug: string;
   is_active: boolean;
-  locale: string;
   currency: string;
-  date_format: string;
-  time_format: string;
-  decimal_separator: string;
-  thousands_separator: string;
   created_at: string;
   updated_at: string;
 };
@@ -20,6 +15,11 @@ export type Profile = {
   last_name: string;
   is_active: boolean;
   password_expires_at: string;
+  locale: string;
+  date_format: string;
+  time_format: string;
+  decimal_separator: string;
+  thousands_separator: string;
   created_at: string;
   updated_at: string;
 };

@@ -23,27 +23,15 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
 import { X, Building2 } from "lucide-react";
-import {
-  SUPPORTED_LOCALES,
-  CURRENCIES,
-  DATE_FORMATS,
-  TIME_FORMATS,
-  DECIMAL_SEPARATORS,
-  THOUSANDS_SEPARATORS,
-  getLocaleDefaults,
-  detectBrowserLocale,
-} from "@/lib/locale-defaults";
+import { CURRENCIES } from "@/lib/locale-defaults";
+import { useTranslation } from "@/lib/i18n/context";
 
 export default function NewOrganizationPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [authorized, setAuthorized] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [locale, setLocale] = useState("it-IT");
   const [currency, setCurrency] = useState("EUR");
-  const [dateFormat, setDateFormat] = useState("dd/MM/yyyy");
-  const [timeFormat, setTimeFormat] = useState("HH:mm");
-  const [decimalSep, setDecimalSep] = useState(",");
-  const [thousandsSep, setThousandsSep] = useState(".");
 
   useEffect(() => {
     async function init() {
@@ -56,34 +44,17 @@ export default function NewOrganizationPage() {
       setAuthorized(true);
     }
     init();
-    const detected = detectBrowserLocale();
-    applyLocaleDefaults(detected);
   }, [router]);
-
-  function applyLocaleDefaults(loc: string) {
-    setLocale(loc);
-    const defaults = getLocaleDefaults(loc);
-    setCurrency(defaults.currency);
-    setDateFormat(defaults.date_format);
-    setTimeFormat(defaults.time_format);
-    setDecimalSep(defaults.decimal_separator);
-    setThousandsSep(defaults.thousands_separator);
-  }
 
   async function handleSubmit(formData: FormData) {
     setIsLoading(true);
-    formData.set("locale", locale);
     formData.set("currency", currency);
-    formData.set("date_format", dateFormat);
-    formData.set("time_format", timeFormat);
-    formData.set("decimal_separator", decimalSep);
-    formData.set("thousands_separator", thousandsSep);
 
     const result = await createOrganizationAction(formData);
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Organizzazione creata con successo");
+      toast.success(t("orgs.created"));
       router.push("/superadmin");
     }
     setIsLoading(false);
@@ -95,15 +66,15 @@ export default function NewOrganizationPage() {
     <div className="max-w-2xl mx-auto">
       <Card>
         <CardHeader>
-          <CardTitle>Nuova Organizzazione</CardTitle>
+          <CardTitle>{t("orgs.newOrg")}</CardTitle>
           <CardDescription>
-            Dopo la creazione potrai aggiungere gli utenti dalla pagina Gestisci
+            {t("orgs.afterCreationNote")}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name">{t("common.name")}</Label>
               <Input
                 id="name"
                 name="name"
@@ -114,114 +85,20 @@ export default function NewOrganizationPage() {
 
             <Separator />
 
-            <h3 className="font-medium">Impostazioni regionali</h3>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label>Lingua</Label>
-                <Select value={locale} onValueChange={(v) => v && applyLocaleDefaults(v)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {SUPPORTED_LOCALES.find((l) => l.value === locale)?.label ?? locale}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SUPPORTED_LOCALES.map((l) => (
-                      <SelectItem key={l.value} value={l.value}>
-                        {l.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Valuta</Label>
-                <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Formato data</Label>
-                <Select value={dateFormat} onValueChange={(v) => v && setDateFormat(v)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {DATE_FORMATS.find((f) => f.value === dateFormat)?.label ?? dateFormat}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DATE_FORMATS.map((f) => (
-                      <SelectItem key={f.value} value={f.value}>
-                        {f.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Formato ora</Label>
-                <Select value={timeFormat} onValueChange={(v) => v && setTimeFormat(v)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {TIME_FORMATS.find((f) => f.value === timeFormat)?.label ?? timeFormat}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TIME_FORMATS.map((f) => (
-                      <SelectItem key={f.value} value={f.value}>
-                        {f.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Separatore decimale</Label>
-                <Select value={decimalSep} onValueChange={(v) => v && setDecimalSep(v)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {DECIMAL_SEPARATORS.find((s) => s.value === decimalSep)?.label ?? decimalSep}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DECIMAL_SEPARATORS.map((s) => (
-                      <SelectItem key={s.value} value={s.value}>
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Separatore migliaia</Label>
-                <Select value={thousandsSep} onValueChange={(v) => v !== null && setThousandsSep(v)}>
-                  <SelectTrigger>
-                    <SelectValue>
-                      {THOUSANDS_SEPARATORS.find((s) => s.value === thousandsSep)?.label ?? thousandsSep}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {THOUSANDS_SEPARATORS.map((s) => (
-                      <SelectItem key={s.value || "none"} value={s.value}>
-                        {s.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label>{t("orgs.currency")}</Label>
+              <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CURRENCIES.map((c) => (
+                    <SelectItem key={c} value={c}>
+                      {c}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="flex gap-3 justify-end">
@@ -231,11 +108,11 @@ export default function NewOrganizationPage() {
                 onClick={() => router.push("/superadmin")}
               >
                 <X className="h-4 w-4 mr-1" />
-                Annulla
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isLoading}>
                 <Building2 className="h-4 w-4 mr-1" />
-                {isLoading ? "Creazione..." : "Crea Organizzazione"}
+                {isLoading ? t("common.creating") : t("orgs.createOrganization")}
               </Button>
             </div>
           </form>

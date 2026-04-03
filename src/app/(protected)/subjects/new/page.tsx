@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { SubjectForm } from "../_components/subject-form";
+import { useTranslation } from "@/lib/i18n/context";
 import type { Tag } from "@/types/supabase";
 
 export default function NewSubjectPage() {
+  const { t } = useTranslation();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -29,7 +31,7 @@ export default function NewSubjectPage() {
   }, []);
 
   if (loading) {
-    return <p className="text-muted-foreground">Caricamento...</p>;
+    return <p className="text-muted-foreground">{t("common.loading")}</p>;
   }
 
   return <SubjectForm tags={tags} />;

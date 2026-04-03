@@ -14,8 +14,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { LogIn, Mail, ArrowLeft, KeyRound } from "lucide-react";
+import { I18nProvider, useTranslation } from "@/lib/i18n/context";
+import { detectBrowserLocale } from "@/lib/locale-defaults";
 
-export function LoginForm() {
+function LoginFormContent() {
+  const { t } = useTranslation();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [error, setError] = useState("");
@@ -27,14 +30,13 @@ export function LoginForm() {
   const urlMessage = searchParams.get("message");
 
   const errorMessages: Record<string, string> = {
-    account_disabled: "Il tuo account è stato disattivato.",
-    organization_disabled: "La tua organizzazione è stata disattivata.",
-    auth_error: "Errore di autenticazione.",
+    account_disabled: t("auth.accountDeactivated"),
+    organization_disabled: t("auth.orgDeactivated"),
+    auth_error: t("auth.authError"),
   };
 
   const successMessages: Record<string, string> = {
-    password_reset_success:
-      "Password aggiornata con successo. Effettua il login.",
+    password_reset_success: t("auth.passwordResetSuccess"),
   };
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
@@ -47,7 +49,7 @@ export function LoginForm() {
     const password = formData.get("password") as string;
 
     if (!email || !password) {
-      setError("Email e password sono obbligatori");
+      setError(t("auth.emailAndPasswordRequired"));
       setIsLoading(false);
       return;
     }
@@ -60,7 +62,7 @@ export function LoginForm() {
     });
 
     if (signInError) {
-      setError("Credenziali non valide");
+      setError(t("auth.invalidCredentials"));
       setIsLoading(false);
       return;
     }
@@ -68,7 +70,7 @@ export function LoginForm() {
     // Fetch role to determine redirect
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      setError("Errore durante il login");
+      setError(t("auth.loginError"));
       setIsLoading(false);
       return;
     }
@@ -96,7 +98,7 @@ export function LoginForm() {
     const email = formData.get("email") as string;
 
     if (!email) {
-      setError("Email obbligatoria");
+      setError(t("auth.emailRequired"));
       setIsLoading(false);
       return;
     }
@@ -108,9 +110,9 @@ export function LoginForm() {
     });
 
     if (resetError) {
-      setError("Errore nell'invio dell'email di recupero");
+      setError(t("auth.resetEmailError"));
     } else {
-      setSuccess("Email di recupero inviata. Controlla la tua casella di posta.");
+      setSuccess(t("auth.resetEmailSent"));
     }
     setIsLoading(false);
   }
@@ -120,12 +122,12 @@ export function LoginForm() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">
-            {showReset ? "Recupera Password" : "Accedi"}
+            {showReset ? t("auth.resetPassword") : t("auth.login")}
           </CardTitle>
           <CardDescription>
             {showReset
-              ? "Inserisci la tua email per ricevere il link di recupero"
-              : "Gestionale Centro Medico"}
+              ? t("auth.sendResetLink")
+              : t("auth.managementTitle")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -153,18 +155,18 @@ export function LoginForm() {
           {showReset ? (
             <form onSubmit={handleResetRequest} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   required
-                  placeholder="nome@esempio.it"
+                  placeholder={t("auth.emailPlaceholder")}
                 />
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 <Mail className="h-4 w-4 mr-2" />
-                {isLoading ? "Invio in corso..." : "Invia link di recupero"}
+                {isLoading ? t("auth.sendingResetLink") : t("auth.sendResetLink")}
               </Button>
               <Button
                 type="button"
@@ -177,23 +179,23 @@ export function LoginForm() {
                 }}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Torna al login
+                {t("auth.backToLogin")}
               </Button>
             </form>
           ) : (
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("auth.email")}</Label>
                 <Input
                   id="email"
                   name="email"
                   type="email"
                   required
-                  placeholder="nome@esempio.it"
+                  placeholder={t("auth.emailPlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("auth.password")}</Label>
                 <Input
                   id="password"
                   name="password"
@@ -203,7 +205,7 @@ export function LoginForm() {
               </div>
               <Button type="submit" className="w-full" disabled={isLoading}>
                 <LogIn className="h-4 w-4 mr-2" />
-                {isLoading ? "Accesso in corso..." : "Accedi"}
+                {isLoading ? t("auth.loggingIn") : t("auth.login")}
               </Button>
               <Button
                 type="button"
@@ -216,12 +218,21 @@ export function LoginForm() {
                 }}
               >
                 <KeyRound className="h-4 w-4 mr-2" />
-                Password dimenticata?
+                {t("auth.forgotPassword")}
               </Button>
             </form>
           )}
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export function LoginForm() {
+  const [locale] = useState(() => detectBrowserLocale());
+  return (
+    <I18nProvider locale={locale}>
+      <LoginFormContent />
+    </I18nProvider>
   );
 }

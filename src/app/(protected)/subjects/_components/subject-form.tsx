@@ -37,50 +37,13 @@ import { verifyVatAction } from "@/app/actions/vies";
 import { createTagAction } from "@/app/actions/tags";
 import { calculateTaxCode, validateTaxCode } from "@/lib/tax-code";
 import { useGooglePlaces } from "@/hooks/use-google-places";
+import { useTranslation } from "@/lib/i18n/context";
 import type {
   SubjectType,
   ContactType,
   SubjectWithDetails,
   Tag,
 } from "@/types/supabase";
-
-const SUBJECT_TYPE_LABELS: Record<SubjectType, string> = {
-  person: "Persona fisica",
-  company: "Azienda",
-  sole_trader: "Ditta individuale",
-  public_administration: "Pubblica amministrazione",
-};
-
-const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
-  phone: "Telefono",
-  mobile: "Cellulare",
-  email: "Email",
-  pec: "PEC",
-};
-
-const ADDRESS_LABELS = [
-  "Residenza",
-  "Domicilio",
-  "Sede legale",
-  "Sede operativa",
-  "Altro",
-];
-
-const COUNTRY_LABELS: Record<string, string> = {
-  IT: "Italia",
-  DE: "Germania",
-  FR: "Francia",
-  ES: "Spagna",
-  GB: "Regno Unito",
-  US: "Stati Uniti",
-  CH: "Svizzera",
-  AT: "Austria",
-};
-
-const GENDER_LABELS: Record<string, string> = {
-  M: "Maschio",
-  F: "Femmina",
-};
 
 const TAG_COLORS = [
   "#6366f1",
@@ -108,7 +71,46 @@ interface SubjectFormProps {
 
 export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps) {
   const router = useRouter();
+  const { t } = useTranslation();
   const isEdit = !!initialData;
+
+  const SUBJECT_TYPE_LABELS: Record<SubjectType, string> = {
+    person: t("subjects.person"),
+    company: t("subjects.company"),
+    sole_trader: t("subjects.soleTrader"),
+    public_administration: t("subjects.publicAdmin"),
+  };
+
+  const CONTACT_TYPE_LABELS: Record<ContactType, string> = {
+    phone: t("subjects.contactTypes.phone"),
+    mobile: t("subjects.contactTypes.mobile"),
+    email: t("subjects.contactTypes.email"),
+    pec: t("subjects.contactTypes.pec"),
+  };
+
+  const ADDRESS_LABELS = [
+    t("subjects.addressLabels.residenza"),
+    t("subjects.addressLabels.domicilio"),
+    t("subjects.addressLabels.sedeLegale"),
+    t("subjects.addressLabels.sedeOperativa"),
+    t("subjects.addressLabels.altro"),
+  ];
+
+  const COUNTRY_LABELS: Record<string, string> = {
+    IT: t("subjects.countries.IT"),
+    DE: t("subjects.countries.DE"),
+    FR: t("subjects.countries.FR"),
+    ES: t("subjects.countries.ES"),
+    GB: t("subjects.countries.GB"),
+    US: t("subjects.countries.US"),
+    CH: t("subjects.countries.CH"),
+    AT: t("subjects.countries.AT"),
+  };
+
+  const GENDER_LABELS: Record<string, string> = {
+    M: t("subjects.male"),
+    F: t("subjects.female"),
+  };
 
   // Subject type
   const [type, setType] = useState<SubjectType>(initialData?.type ?? "person");
@@ -251,7 +253,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
   // Recalculate tax code
   const handleRecalculateTaxCode = useCallback(async () => {
     if (!firstName || !lastName || !birthDate || !birthPlace || !gender) {
-      toast.error("Compila tutti i campi per calcolare il codice fiscale");
+      toast.error(t("subjects.fillFieldsForTaxCode"));
       return;
     }
     const result = await calculateTaxCode({
@@ -264,11 +266,11 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
     if (result) {
       setTaxCode(result);
       setTaxCodeManual(false);
-      toast.success("Codice fiscale ricalcolato");
+      toast.success(t("subjects.taxCodeRecalculated"));
     } else {
-      toast.error("Impossibile calcolare il codice fiscale. Verifica i dati inseriti.");
+      toast.error(t("subjects.taxCodeCalculationError"));
     }
-  }, [firstName, lastName, birthDate, birthPlace, gender]);
+  }, [firstName, lastName, birthDate, birthPlace, gender, t]);
 
   // Address helpers
   const addAddress = () => {
@@ -347,13 +349,13 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
   };
 
   const filteredTags = availableTags.filter(
-    (t) =>
-      (!tagSearch || t.name.toLowerCase().includes(tagSearch.toLowerCase())) &&
-      !selectedTagIds.includes(t.id)
+    (tg) =>
+      (!tagSearch || tg.name.toLowerCase().includes(tagSearch.toLowerCase())) &&
+      !selectedTagIds.includes(tg.id)
   );
 
   const exactTagMatch = availableTags.some(
-    (t) => t.name.toLowerCase() === tagSearch.trim().toLowerCase()
+    (tg) => tg.name.toLowerCase() === tagSearch.trim().toLowerCase()
   );
   const canCreateTag = tagSearch.trim().length > 0 && !exactTagMatch;
 
@@ -404,7 +406,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(isEdit ? "Soggetto aggiornato" : "Soggetto creato");
+      toast.success(isEdit ? t("subjects.updated") : t("subjects.created"));
       router.push("/subjects");
     }
     setIsSubmitting(false);
@@ -418,29 +420,29 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       <div className="flex items-center gap-4">
         <Button variant="outline" size="sm" onClick={() => router.push("/subjects")}>
           <ArrowLeft className="h-4 w-4 mr-1" />
-          Indietro
+          {t("common.back")}
         </Button>
         <h1 className="text-2xl font-bold">
-          {isEdit ? "Modifica Soggetto" : "Nuovo Soggetto"}
+          {isEdit ? t("subjects.editSubject") : t("subjects.newSubject")}
         </h1>
       </div>
 
       {/* Section 1: Type */}
       <Card>
         <CardHeader>
-          <CardTitle>Tipo Soggetto</CardTitle>
+          <CardTitle>{t("subjects.subjectType")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {(Object.keys(SUBJECT_TYPE_LABELS) as SubjectType[]).map((t) => (
+            {(Object.keys(SUBJECT_TYPE_LABELS) as SubjectType[]).map((st) => (
               <Button
-                key={t}
-                variant={type === t ? "default" : "outline"}
+                key={st}
+                variant={type === st ? "default" : "outline"}
                 size="sm"
                 className="w-full"
-                onClick={() => setType(t)}
+                onClick={() => setType(st)}
               >
-                {SUBJECT_TYPE_LABELS[t]}
+                {SUBJECT_TYPE_LABELS[st]}
               </Button>
             ))}
           </div>
@@ -451,7 +453,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       <Card>
         <CardHeader>
           <CardTitle>
-            {isPerson ? "Dati Anagrafici" : "Dati Aziendali"}
+            {isPerson ? t("subjects.personalData") : t("subjects.companyData")}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -459,7 +461,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
             <>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Nome *</Label>
+                  <Label htmlFor="firstName">{t("subjects.firstName")} *</Label>
                   <Input
                     id="firstName"
                     value={firstName}
@@ -468,7 +470,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Cognome *</Label>
+                  <Label htmlFor="lastName">{t("subjects.lastName")} *</Label>
                   <Input
                     id="lastName"
                     value={lastName}
@@ -479,7 +481,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
               </div>
               <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-2">
-                  <Label htmlFor="birthDate">Data di nascita</Label>
+                  <Label htmlFor="birthDate">{t("subjects.birthDate")}</Label>
                   <Input
                     id="birthDate"
                     type="date"
@@ -488,7 +490,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="birthPlace">Luogo di nascita</Label>
+                  <Label htmlFor="birthPlace">{t("subjects.birthPlace")}</Label>
                   <Input
                     id="birthPlace"
                     value={birthPlace}
@@ -497,22 +499,22 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Sesso</Label>
+                  <Label>{t("subjects.gender")}</Label>
                   <Select value={gender} onValueChange={(v) => setGender(v ?? "")}>
                     <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Seleziona">
+                      <SelectValue placeholder={t("common.search")}>
                         {gender ? GENDER_LABELS[gender] : null}
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="M">Maschio</SelectItem>
-                      <SelectItem value="F">Femmina</SelectItem>
+                      <SelectItem value="M">{t("subjects.male")}</SelectItem>
+                      <SelectItem value="F">{t("subjects.female")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="taxCode">Codice Fiscale</Label>
+                <Label htmlFor="taxCode">{t("subjects.taxCode")}</Label>
                 <div className="flex gap-2">
                   <Input
                     id="taxCode"
@@ -521,7 +523,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                       setTaxCode(e.target.value.toUpperCase());
                       setTaxCodeManual(true);
                     }}
-                    placeholder="Calcolato automaticamente"
+                    placeholder={t("subjects.autoCalculated")}
                     maxLength={16}
                     className="flex-1 font-mono uppercase"
                   />
@@ -530,7 +532,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                     variant="outline"
                     size="sm"
                     onClick={handleRecalculateTaxCode}
-                    title="Ricalcola"
+                    title={t("subjects.recalculate")}
                   >
                     <Calculator className="h-4 w-4" />
                   </Button>
@@ -538,8 +540,8 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                 {taxCode && (
                   <p className={`text-xs ${validateTaxCode(taxCode) ? "text-green-500" : "text-yellow-500"}`}>
                     {validateTaxCode(taxCode)
-                      ? "Codice fiscale valido"
-                      : "Formato codice fiscale non valido"}
+                      ? t("subjects.taxCodeValid")
+                      : t("subjects.taxCodeInvalid")}
                   </p>
                 )}
               </div>
@@ -547,7 +549,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
           ) : (
             <>
               <div className="space-y-2">
-                <Label htmlFor="businessName">Ragione Sociale *</Label>
+                <Label htmlFor="businessName">{t("subjects.businessName")} *</Label>
                 <Input
                   id="businessName"
                   value={businessName}
@@ -557,7 +559,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="vatNumber">Partita IVA</Label>
+                  <Label htmlFor="vatNumber">{t("subjects.vatNumber")}</Label>
                   <div className="flex items-center gap-2">
                     <Input
                       id="vatNumber"
@@ -575,14 +577,14 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                     {vatVerified === false && vatNumber && <XCircle className="h-5 w-5 text-red-500" />}
                   </div>
                   {vatVerified === true && (
-                    <p className="text-xs text-green-500">P.IVA verificata VIES</p>
+                    <p className="text-xs text-green-500">{t("subjects.vatVerifiedVies")}</p>
                   )}
                   {vatVerified === false && vatNumber && (
-                    <p className="text-xs text-red-500">P.IVA non valida o VIES non disponibile</p>
+                    <p className="text-xs text-red-500">{t("subjects.vatInvalidVies")}</p>
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="sdiCode">Codice SDI</Label>
+                  <Label htmlFor="sdiCode">{t("subjects.sdiCode")}</Label>
                   <Input
                     id="sdiCode"
                     value={sdiCode}
@@ -594,7 +596,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="taxCodeCompany">Codice Fiscale</Label>
+                <Label htmlFor="taxCodeCompany">{t("subjects.taxCode")}</Label>
                 <Input
                   id="taxCodeCompany"
                   value={taxCode}
@@ -611,11 +613,11 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       {/* Section 3: Common data */}
       <Card>
         <CardHeader>
-          <CardTitle>Dati Comuni</CardTitle>
+          <CardTitle>{t("subjects.commonData")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="iban">IBAN</Label>
+            <Label htmlFor="iban">{t("subjects.iban")}</Label>
             <Input
               id="iban"
               value={iban}
@@ -625,7 +627,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="notes">Note</Label>
+            <Label htmlFor="notes">{t("subjects.notes")}</Label>
             <textarea
               id="notes"
               value={notes}
@@ -640,16 +642,16 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       {/* Section 4: Addresses */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Indirizzi</CardTitle>
+          <CardTitle>{t("subjects.addresses")}</CardTitle>
           <Button variant="outline" size="sm" onClick={addAddress}>
             <Plus className="h-4 w-4 mr-1" />
-            Aggiungi
+            {t("common.add")}
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           {addresses.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nessun indirizzo aggiunto
+              {t("subjects.noAddresses")}
             </p>
           )}
           {addresses.map((addr) => (
@@ -661,7 +663,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                     onValueChange={(v) => updateAddress(addr._key, "label", v ?? "")}
                   >
                     <SelectTrigger className="w-40">
-                      <SelectValue placeholder="Etichetta">
+                      <SelectValue placeholder={t("subjects.addressLabel")}>
                         {addr.label || null}
                       </SelectValue>
                     </SelectTrigger>
@@ -682,7 +684,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                       }
                       className="rounded"
                     />
-                    Primario
+                    {t("common.primary")}
                   </label>
                 </div>
                 <Button
@@ -696,7 +698,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
 
               <div className="grid gap-3 sm:grid-cols-4">
                 <div className="space-y-1 sm:col-span-1">
-                  <Label className="text-xs">Paese</Label>
+                  <Label className="text-xs">{t("subjects.country")}</Label>
                   <Select
                     value={addr.country_code}
                     onValueChange={(v) => updateAddress(addr._key, "country_code", v ?? "IT")}
@@ -707,19 +709,19 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="IT">Italia</SelectItem>
-                      <SelectItem value="DE">Germania</SelectItem>
-                      <SelectItem value="FR">Francia</SelectItem>
-                      <SelectItem value="ES">Spagna</SelectItem>
-                      <SelectItem value="GB">Regno Unito</SelectItem>
-                      <SelectItem value="US">Stati Uniti</SelectItem>
-                      <SelectItem value="CH">Svizzera</SelectItem>
-                      <SelectItem value="AT">Austria</SelectItem>
+                      <SelectItem value="IT">{t("subjects.countries.IT")}</SelectItem>
+                      <SelectItem value="DE">{t("subjects.countries.DE")}</SelectItem>
+                      <SelectItem value="FR">{t("subjects.countries.FR")}</SelectItem>
+                      <SelectItem value="ES">{t("subjects.countries.ES")}</SelectItem>
+                      <SelectItem value="GB">{t("subjects.countries.GB")}</SelectItem>
+                      <SelectItem value="US">{t("subjects.countries.US")}</SelectItem>
+                      <SelectItem value="CH">{t("subjects.countries.CH")}</SelectItem>
+                      <SelectItem value="AT">{t("subjects.countries.AT")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1 sm:col-span-3">
-                  <Label className="text-xs">Indirizzo</Label>
+                  <Label className="text-xs">{t("subjects.street")}</Label>
                   <Input
                     ref={(el) => {
                       if (el) streetInputRefs.current.set(addr._key, el);
@@ -737,14 +739,14 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
 
               <div className="grid gap-3 sm:grid-cols-4">
                 <div className="space-y-1">
-                  <Label className="text-xs">CAP</Label>
+                  <Label className="text-xs">{t("subjects.zipCode")}</Label>
                   <Input
                     value={addr.zip_code}
                     onChange={(e) => updateAddress(addr._key, "zip_code", e.target.value)}
                   />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Citta</Label>
+                  <Label className="text-xs">{t("subjects.city")}</Label>
                   <Input
                     value={addr.city}
                     onChange={(e) => updateAddress(addr._key, "city", e.target.value)}
@@ -753,7 +755,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                 {addr.country_code === "IT" && (
                   <>
                     <div className="space-y-1">
-                      <Label className="text-xs">Provincia</Label>
+                      <Label className="text-xs">{t("subjects.province")}</Label>
                       <Input
                         value={addr.province}
                         onChange={(e) => updateAddress(addr._key, "province", e.target.value)}
@@ -763,7 +765,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                       />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">Regione</Label>
+                      <Label className="text-xs">{t("subjects.region")}</Label>
                       <Input
                         value={addr.region}
                         onChange={(e) => updateAddress(addr._key, "region", e.target.value)}
@@ -780,16 +782,16 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       {/* Section 5: Contacts */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Contatti</CardTitle>
+          <CardTitle>{t("subjects.contacts")}</CardTitle>
           <Button variant="outline" size="sm" onClick={addContact}>
             <Plus className="h-4 w-4 mr-1" />
-            Aggiungi
+            {t("common.add")}
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
           {contacts.length === 0 && (
             <p className="text-sm text-muted-foreground text-center py-4">
-              Nessun contatto aggiunto
+              {t("subjects.noContacts")}
             </p>
           )}
           {contacts.map((contact) => (
@@ -814,7 +816,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
               <Input
                 value={contact.label}
                 onChange={(e) => updateContact(contact._key, "label", e.target.value)}
-                placeholder="Etichetta"
+                placeholder={t("subjects.addressLabel")}
                 className="w-28"
               />
               <Input
@@ -836,7 +838,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                   }
                   className="rounded"
                 />
-                Primario
+                {t("common.primary")}
               </label>
               <Button
                 variant="ghost"
@@ -853,14 +855,14 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       {/* Section 6: Tags */}
       <Card>
         <CardHeader>
-          <CardTitle>Tag</CardTitle>
+          <CardTitle>{t("subjects.tags")}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           {/* Selected tags */}
           {selectedTagIds.length > 0 && (
             <div className="flex gap-1.5 flex-wrap">
               {selectedTagIds.map((tagId) => {
-                const tag = availableTags.find((t) => t.id === tagId);
+                const tag = availableTags.find((tg) => tg.id === tagId);
                 if (!tag) return null;
                 return (
                   <Badge
@@ -887,7 +889,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
               }}
               onFocus={() => setShowTagDropdown(true)}
               onBlur={() => setTimeout(() => setShowTagDropdown(false), 200)}
-              placeholder="Digita e premi Invio per creare un tag..."
+              placeholder={t("subjects.typeAndEnter")}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
                   e.preventDefault();
@@ -949,7 +951,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
                         }}
                       >
                         <Plus className="h-3 w-3 mr-1" />
-                        Crea &quot;{tagSearch.trim()}&quot;
+                        {t("subjects.createTag")} &quot;{tagSearch.trim()}&quot;
                       </Button>
                     </div>
                   </div>
@@ -963,7 +965,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
       {/* Footer */}
       <div className="flex justify-end gap-3 pb-8">
         <Button variant="outline" onClick={() => router.push("/subjects")}>
-          Annulla
+          {t("common.cancel")}
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting}>
           {isSubmitting ? (
@@ -971,7 +973,7 @@ export function SubjectForm({ initialData, tags: initialTags }: SubjectFormProps
           ) : (
             <Save className="h-4 w-4 mr-1" />
           )}
-          {isSubmitting ? "Salvataggio..." : "Salva"}
+          {isSubmitting ? t("common.saving") : t("common.save")}
         </Button>
       </div>
     </div>

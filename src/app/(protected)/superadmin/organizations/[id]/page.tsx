@@ -26,16 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import {
-  SUPPORTED_LOCALES,
-  CURRENCIES,
-  DATE_FORMATS,
-  TIME_FORMATS,
-  DECIMAL_SEPARATORS,
-  THOUSANDS_SEPARATORS,
-  getLocaleDefaults,
-  detectBrowserLocale,
-} from "@/lib/locale-defaults";
+import { CURRENCIES } from "@/lib/locale-defaults";
 import {
   Card,
   CardContent,
@@ -54,8 +45,9 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowLeft, Ban, Globe, Pencil, Plus, RefreshCw, Save, Trash2, UserCheck, UserPlus, X } from "lucide-react";
+import { ArrowLeft, Ban, Pencil, Plus, RefreshCw, Save, Trash2, UserCheck, UserPlus, X } from "lucide-react";
 import { ROLE_LABELS, getRoleLabel } from "@/lib/roles";
+import { useTranslation } from "@/lib/i18n/context";
 import type { ColDef, ICellRendererParams } from "ag-grid-community";
 
 interface User {
@@ -69,12 +61,13 @@ interface User {
 }
 
 const AVAILABLE_ROLES = [
-  { name: "user_manager", label: "Gestione Utenti" },
-  { name: "business_analyst", label: "Business Analyst" },
-  { name: "accountant", label: "Contabile" },
+  { name: "user_manager", label: "roles.userManager" },
+  { name: "business_analyst", label: "roles.businessAnalyst" },
+  { name: "accountant", label: "roles.accountant" },
 ];
 
 export default function OrganizationDetailPage() {
+  const { t } = useTranslation();
   const params = useParams();
   const router = useRouter();
   const orgId = params.id as string;
@@ -94,12 +87,7 @@ export default function OrganizationDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Settings state
-  const [locale, setLocale] = useState("it-IT");
   const [currency, setCurrency] = useState("EUR");
-  const [dateFormat, setDateFormat] = useState("dd/MM/yyyy");
-  const [timeFormat, setTimeFormat] = useState("HH:mm");
-  const [decimalSep, setDecimalSep] = useState(",");
-  const [thousandsSep, setThousandsSep] = useState(".");
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Rename state
@@ -117,25 +105,10 @@ export default function OrganizationDetailPage() {
     const o = orgData.organization;
     setOrg(o);
     if (o) {
-      setLocale(o.locale ?? "it-IT");
       setCurrency(o.currency ?? "EUR");
-      setDateFormat(o.date_format ?? "dd/MM/yyyy");
-      setTimeFormat(o.time_format ?? "HH:mm");
-      setDecimalSep(o.decimal_separator ?? ",");
-      setThousandsSep(o.thousands_separator ?? ".");
     }
     setUsers(usersData.users ?? []);
     setLoading(false);
-  }
-
-  function handleLocaleChange(newLocale: string) {
-    setLocale(newLocale);
-    const defaults = getLocaleDefaults(newLocale);
-    setCurrency(defaults.currency);
-    setDateFormat(defaults.date_format);
-    setTimeFormat(defaults.time_format);
-    setDecimalSep(defaults.decimal_separator);
-    setThousandsSep(defaults.thousands_separator);
   }
 
   async function handleRename() {
@@ -145,7 +118,7 @@ export default function OrganizationDetailPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Organizzazione rinominata");
+      toast.success(t("orgs.renamed"));
       setRenameDialogOpen(false);
       loadData();
     }
@@ -154,18 +127,11 @@ export default function OrganizationDetailPage() {
 
   async function handleSaveSettings() {
     setIsSavingSettings(true);
-    const result = await updateOrganizationSettingsAction(orgId, {
-      locale,
-      currency,
-      date_format: dateFormat,
-      time_format: timeFormat,
-      decimal_separator: decimalSep,
-      thousands_separator: thousandsSep,
-    });
+    const result = await updateOrganizationSettingsAction(orgId, { currency });
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Impostazioni salvate");
+      toast.success(t("orgs.settingsSaved"));
     }
     setIsSavingSettings(false);
   }
@@ -211,7 +177,7 @@ export default function OrganizationDetailPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente aggiornato");
+      toast.success(t("users.updated"));
       setEditUser(null);
       loadData();
     }
@@ -225,7 +191,7 @@ export default function OrganizationDetailPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente creato con successo");
+      toast.success(t("users.created"));
       setCreateDialogOpen(false);
       loadData();
     }
@@ -238,7 +204,7 @@ export default function OrganizationDetailPage() {
       toast.error(result.error);
     } else {
       toast.success(
-        currentActive ? "Utente disattivato" : "Utente riattivato"
+        currentActive ? t("users.deactivated") : t("users.reactivated")
       );
       loadData();
     }
@@ -265,7 +231,7 @@ export default function OrganizationDetailPage() {
     });
 
     if (otpError) {
-      toast.error("Errore nell'impersonazione: " + otpError.message);
+      toast.error(t("subjects.impersonationError") + ": " + otpError.message);
       return;
     }
 
@@ -279,7 +245,7 @@ export default function OrganizationDetailPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente eliminato");
+      toast.success(t("users.deleted"));
       loadData();
     }
     setIsSubmitting(false);
@@ -289,7 +255,7 @@ export default function OrganizationDetailPage() {
   const columnDefs = useMemo<ColDef<User>[]>(
     () => [
       {
-        headerName: "Nome",
+        headerName: t("common.name"),
         valueGetter: (params) =>
           params.data
             ? `${params.data.first_name} ${params.data.last_name}`
@@ -297,26 +263,26 @@ export default function OrganizationDetailPage() {
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Email",
+        headerName: t("common.email"),
         field: "email",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Ruoli",
+        headerName: t("common.roles"),
         valueGetter: (params) =>
           params.data?.user_roles
-            ?.map((ur) => getRoleLabel(ur.roles.name))
+            ?.map((ur) => t(getRoleLabel(ur.roles.name)))
             .join(", ") ?? "",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Stato",
+        headerName: t("common.status"),
         field: "is_active",
         filter: "agTextColumnFilter",
-        valueFormatter: (params) => (params.value ? "Attivo" : "Disattivo"),
+        valueFormatter: (params) => (params.value ? t("common.active") : t("common.inactive")),
       },
       {
-        headerName: "Azioni",
+        headerName: t("common.actions"),
         sortable: false,
         filter: false,
         resizable: false,
@@ -337,7 +303,7 @@ export default function OrganizationDetailPage() {
                     <Pencil className="h-4 w-4" />
                   </Button>
                 } />
-                <TooltipContent>Modifica</TooltipContent>
+                <TooltipContent>{t("common.edit")}</TooltipContent>
               </Tooltip>
               <Button
                 variant="secondary"
@@ -345,7 +311,7 @@ export default function OrganizationDetailPage() {
                 onClick={() => handleImpersonate(user.id)}
               >
                 <UserCheck className="h-4 w-4 mr-1" />
-                Impersona
+                {t("users.impersonate")}
               </Button>
               <Button
                 variant="outline"
@@ -353,9 +319,9 @@ export default function OrganizationDetailPage() {
                 onClick={() => handleToggle(user.id, user.is_active)}
               >
                 {user.is_active ? (
-                  <><Ban className="h-4 w-4 mr-1" />Disattiva</>
+                  <><Ban className="h-4 w-4 mr-1" />{t("common.deactivate")}</>
                 ) : (
-                  <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
+                  <><RefreshCw className="h-4 w-4 mr-1" />{t("common.reactivate")}</>
                 )}
               </Button>
               <Tooltip>
@@ -368,7 +334,7 @@ export default function OrganizationDetailPage() {
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 } />
-                <TooltipContent>Elimina</TooltipContent>
+                <TooltipContent>{t("common.delete")}</TooltipContent>
               </Tooltip>
             </div>
           );
@@ -376,13 +342,13 @@ export default function OrganizationDetailPage() {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [t]
   );
 
   if (!authorized || loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Caricamento...</p>
+        <p className="text-muted-foreground">{t("common.loading")}</p>
       </div>
     );
   }
@@ -390,7 +356,7 @@ export default function OrganizationDetailPage() {
   if (!org) {
     return (
       <div className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Organizzazione non trovata</p>
+        <p className="text-muted-foreground">{t("orgs.orgNotFound")}</p>
       </div>
     );
   }
@@ -408,12 +374,12 @@ export default function OrganizationDetailPage() {
               <ArrowLeft className="h-4 w-4" />
             </Button>
           } />
-          <TooltipContent>Torna alle organizzazioni</TooltipContent>
+          <TooltipContent>{t("orgs.backToOrganizations")}</TooltipContent>
         </Tooltip>
         <div className="flex items-center gap-2">
           <div>
             <h1 className="text-2xl font-bold">{org.name}</h1>
-            <p className="text-sm text-muted-foreground">Gestione organizzazione</p>
+            <p className="text-sm text-muted-foreground">{t("orgs.managementTitle")}</p>
           </div>
           <Tooltip>
             <TooltipTrigger render={
@@ -428,7 +394,7 @@ export default function OrganizationDetailPage() {
                 <Pencil className="h-4 w-4" />
               </Button>
             } />
-            <TooltipContent>Rinomina</TooltipContent>
+            <TooltipContent>{t("orgs.rename")}</TooltipContent>
           </Tooltip>
         </div>
       </div>
@@ -437,9 +403,9 @@ export default function OrganizationDetailPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <CardTitle>Utenti</CardTitle>
+              <CardTitle>{t("users.title")}</CardTitle>
               <CardDescription>
-                {users.length} utenti in questa organizzazione
+                {users.length} {t("users.usersInThisOrg")}
               </CardDescription>
             </div>
             <Dialog
@@ -448,32 +414,32 @@ export default function OrganizationDetailPage() {
             >
               <DialogTrigger render={<Button />}>
                 <Plus className="h-4 w-4 mr-2" />
-                Nuovo Utente
+                {t("users.newUser")}
               </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Crea Nuovo Utente</DialogTitle>
+                  <DialogTitle>{t("users.createNewUser")}</DialogTitle>
                   <DialogDescription>
-                    L&apos;utente riceverà un invito via email
+                    {t("users.userWillReceiveInvite")}
                   </DialogDescription>
                 </DialogHeader>
                 <form action={handleCreateUser} className="space-y-4">
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
-                      <Label htmlFor="firstName">Nome</Label>
+                      <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
                       <Input id="firstName" name="firstName" required />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="lastName">Cognome</Label>
+                      <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
                       <Input id="lastName" name="lastName" required />
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">{t("common.email")}</Label>
                     <Input id="email" name="email" type="email" required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Ruoli</Label>
+                    <Label>{t("common.roles")}</Label>
                     <div className="space-y-2">
                       {AVAILABLE_ROLES.map((role) => (
                         <label
@@ -486,7 +452,7 @@ export default function OrganizationDetailPage() {
                             value={role.name}
                             className="rounded"
                           />
-                          {role.label}
+                          {t(role.label)}
                         </label>
                       ))}
                     </div>
@@ -498,11 +464,11 @@ export default function OrganizationDetailPage() {
                       onClick={() => setCreateDialogOpen(false)}
                     >
                       <X className="h-4 w-4 mr-1" />
-                      Annulla
+                      {t("common.cancel")}
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
                       <UserPlus className="h-4 w-4 mr-1" />
-                      {isSubmitting ? "Creazione..." : "Crea Utente"}
+                      {isSubmitting ? t("common.creating") : t("users.createUser")}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -522,26 +488,26 @@ export default function OrganizationDetailPage() {
                     {user.first_name} {user.last_name}
                   </span>
                   <Badge variant={user.is_active ? "default" : "secondary"}>
-                    {user.is_active ? "Attivo" : "Disattivo"}
+                    {user.is_active ? t("common.active") : t("common.inactive")}
                   </Badge>
                 </div>
                 <div className="text-sm text-muted-foreground">{user.email}</div>
                 <div className="flex gap-1 flex-wrap">
                   {user.user_roles.map((ur) => (
                     <Badge key={ur.roles.name} variant="outline">
-                      {getRoleLabel(ur.roles.name)}
+                      {t(getRoleLabel(ur.roles.name))}
                     </Badge>
                   ))}
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   <Button variant="outline" size="sm" onClick={() => openEditDialog(user)}>
-                    <Pencil className="h-4 w-4 mr-1" /> Modifica
+                    <Pencil className="h-4 w-4 mr-1" /> {t("common.edit")}
                   </Button>
                   <Button variant="secondary" size="sm" onClick={() => handleImpersonate(user.id)}>
-                    <UserCheck className="h-4 w-4 mr-1" /> Impersona
+                    <UserCheck className="h-4 w-4 mr-1" /> {t("users.impersonate")}
                   </Button>
                   <Button variant="outline" size="sm" onClick={() => handleToggle(user.id, user.is_active)}>
-                    {user.is_active ? "Disattiva" : "Riattiva"}
+                    {user.is_active ? t("common.deactivate") : t("common.reactivate")}
                   </Button>
                   <Button variant="destructive" size="sm" onClick={() => setDeleteUser(user)}>
                     <Trash2 className="h-4 w-4" />
@@ -565,7 +531,7 @@ export default function OrganizationDetailPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Modifica Utente</DialogTitle>
+            <DialogTitle>{t("users.editUser")}</DialogTitle>
             <DialogDescription>
               {editUser?.email}
             </DialogDescription>
@@ -573,14 +539,14 @@ export default function OrganizationDetailPage() {
           <div className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Nome</Label>
+                <Label>{t("subjects.firstName")}</Label>
                 <Input
                   value={editFirstName}
                   onChange={(e) => setEditFirstName(e.target.value)}
                 />
               </div>
               <div className="space-y-2">
-                <Label>Cognome</Label>
+                <Label>{t("subjects.lastName")}</Label>
                 <Input
                   value={editLastName}
                   onChange={(e) => setEditLastName(e.target.value)}
@@ -589,7 +555,7 @@ export default function OrganizationDetailPage() {
             </div>
 
             <div className="space-y-2">
-              <Label>Ruoli</Label>
+              <Label>{t("common.roles")}</Label>
               <div className="space-y-2">
                 {AVAILABLE_ROLES.map((role) => (
                   <label key={role.name} className="flex items-center gap-2 text-sm">
@@ -605,7 +571,7 @@ export default function OrganizationDetailPage() {
                       }}
                       className="rounded"
                     />
-                    {role.label}
+                    {t(role.label)}
                   </label>
                 ))}
               </div>
@@ -614,7 +580,7 @@ export default function OrganizationDetailPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label>Scadenza password</Label>
+              <Label>{t("users.passwordExpiry")}</Label>
               <Input
                 type="date"
                 value={editPasswordExpiry}
@@ -625,26 +591,26 @@ export default function OrganizationDetailPage() {
             <Separator />
 
             <div className="space-y-2">
-              <Label>Imposta nuova password</Label>
+              <Label>{t("users.setNewPassword")}</Label>
               <Input
                 type="password"
                 value={editNewPassword}
                 onChange={(e) => setEditNewPassword(e.target.value)}
-                placeholder="Lascia vuoto per non modificare"
+                placeholder={t("users.leaveEmptyToKeep")}
               />
               <p className="text-xs text-muted-foreground">
-                Se impostata, la password risulterà scaduta e l&apos;utente dovrà cambiarla al primo accesso.
+                {t("users.passwordExpiryNote")}
               </p>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEditUser(null)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleSaveEdit} disabled={isSubmitting}>
               <Save className="h-4 w-4 mr-1" />
-              {isSubmitting ? "Salvataggio..." : "Salva"}
+              {isSubmitting ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -652,135 +618,32 @@ export default function OrganizationDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Impostazioni regionali</CardTitle>
+          <CardTitle>{t("orgs.currency")}</CardTitle>
           <CardDescription>
-            Valuta, formato data/ora e separatori per questa organizzazione
+            {t("orgs.currencyDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>Lingua</Label>
-              <Select value={locale} onValueChange={(v) => v && handleLocaleChange(v)}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {SUPPORTED_LOCALES.find((l) => l.value === locale)?.label ?? locale}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {SUPPORTED_LOCALES.map((l) => (
-                    <SelectItem key={l.value} value={l.value}>
-                      {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Valuta</Label>
-              <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CURRENCIES.map((c) => (
-                    <SelectItem key={c} value={c}>
-                      {c}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Formato data</Label>
-              <Select value={dateFormat} onValueChange={(v) => v && setDateFormat(v)}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {DATE_FORMATS.find((f) => f.value === dateFormat)?.label ?? dateFormat}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {DATE_FORMATS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Formato ora</Label>
-              <Select value={timeFormat} onValueChange={(v) => v && setTimeFormat(v)}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {TIME_FORMATS.find((f) => f.value === timeFormat)?.label ?? timeFormat}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {TIME_FORMATS.map((f) => (
-                    <SelectItem key={f.value} value={f.value}>
-                      {f.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Separatore decimale</Label>
-              <Select value={decimalSep} onValueChange={(v) => v && setDecimalSep(v)}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {DECIMAL_SEPARATORS.find((s) => s.value === decimalSep)?.label ?? decimalSep}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {DECIMAL_SEPARATORS.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Separatore migliaia</Label>
-              <Select value={thousandsSep} onValueChange={(v) => v !== null && setThousandsSep(v)}>
-                <SelectTrigger>
-                  <SelectValue>
-                    {THOUSANDS_SEPARATORS.find((s) => s.value === thousandsSep)?.label ?? thousandsSep}
-                  </SelectValue>
-                </SelectTrigger>
-                <SelectContent>
-                  {THOUSANDS_SEPARATORS.map((s) => (
-                    <SelectItem key={s.value || "none"} value={s.value}>
-                      {s.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>{t("orgs.currency")}</Label>
+            <Select value={currency} onValueChange={(v) => v && setCurrency(v)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {CURRENCIES.map((c) => (
+                  <SelectItem key={c} value={c}>
+                    {c}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
-          <div className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                const detected = detectBrowserLocale();
-                handleLocaleChange(detected);
-                toast.success(`Impostazioni caricate dal browser (${detected})`);
-              }}
-            >
-              <Globe className="h-4 w-4 mr-1" />
-              Rileva dal browser
-            </Button>
+          <div className="flex justify-end">
             <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
               <Save className="h-4 w-4 mr-1" />
-              {isSavingSettings ? "Salvataggio..." : "Salva impostazioni"}
+              {isSavingSettings ? t("common.saving") : t("common.save")}
             </Button>
           </div>
         </CardContent>
@@ -788,9 +651,9 @@ export default function OrganizationDetailPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Strumenti</CardTitle>
+          <CardTitle>{t("orgs.tools")}</CardTitle>
           <CardDescription>
-            Genera dati di test per questa organizzazione
+            {t("orgs.toolsDesc")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -798,7 +661,7 @@ export default function OrganizationDetailPage() {
             variant="outline"
             onClick={() => router.push(`/superadmin/organizations/${orgId}/generate`)}
           >
-            Genera dati
+            {t("orgs.generateData")}
           </Button>
         </CardContent>
       </Card>
@@ -815,10 +678,10 @@ export default function OrganizationDetailPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Rinomina organizzazione</DialogTitle>
+            <DialogTitle>{t("orgs.renameTitle")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-2">
-            <Label htmlFor="newOrgName">Nuovo nome</Label>
+            <Label htmlFor="newOrgName">{t("orgs.newName")}</Label>
             <Input
               id="newOrgName"
               value={newName}
@@ -829,11 +692,11 @@ export default function OrganizationDetailPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setRenameDialogOpen(false)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button onClick={handleRename} disabled={isRenaming || !newName.trim()}>
               <Save className="h-4 w-4 mr-1" />
-              {isRenaming ? "Salvataggio..." : "Salva"}
+              {isRenaming ? t("common.saving") : t("common.save")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -845,19 +708,19 @@ export default function OrganizationDetailPage() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Conferma eliminazione</DialogTitle>
+            <DialogTitle>{t("users.confirmDelete")}</DialogTitle>
             <DialogDescription>
-              Sei sicuro di voler eliminare l&apos;utente{" "}
+              {t("users.confirmDeleteDesc")}{" "}
               <strong>
                 {deleteUser?.first_name} {deleteUser?.last_name}
               </strong>
-              ? Questa azione è irreversibile.
+              ? {t("users.irreversible")}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteUser(null)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -865,7 +728,7 @@ export default function OrganizationDetailPage() {
               disabled={isSubmitting}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              {isSubmitting ? "Eliminazione..." : "Elimina"}
+              {isSubmitting ? t("common.deleting") : t("common.delete")}
             </Button>
           </DialogFooter>
         </DialogContent>

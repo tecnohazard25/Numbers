@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslation } from "@/lib/i18n/context";
 import { toggleUserAction, createUserAction } from "@/app/actions/users";
 import { DataGrid } from "@/components/data-grid";
 import { Badge } from "@/components/ui/badge";
@@ -52,6 +53,7 @@ import { ROLE_LABELS } from "@/lib/roles";
 const ALL_ROLES = Object.entries(ROLE_LABELS).map(([name, label]) => ({ name, label }));
 
 export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
+  const { t } = useTranslation();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -67,7 +69,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
       toast.error(result.error);
     } else {
       toast.success(
-        currentActive ? "Utente disattivato" : "Utente riattivato"
+        currentActive ? t("users.deactivated") : t("users.reactivated")
       );
     }
   }
@@ -78,7 +80,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Utente creato con successo");
+      toast.success(t("users.created"));
       setDialogOpen(false);
     }
     setIsLoading(false);
@@ -87,7 +89,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
   const columnDefs = useMemo<ColDef<User>[]>(
     () => [
       {
-        headerName: "Nome",
+        headerName: t("common.name"),
         valueGetter: (params) =>
           params.data
             ? `${params.data.first_name} ${params.data.last_name}`
@@ -95,14 +97,14 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Email",
+        headerName: t("common.email"),
         field: "email",
         filter: "agTextColumnFilter",
       },
       ...(isSuperadmin
         ? [
             {
-              headerName: "Organizzazione",
+              headerName: t("users.organization"),
               valueGetter: (params: any) =>
                 params.data?.organizations?.name ?? "—",
               filter: "agTextColumnFilter",
@@ -110,21 +112,21 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
           ]
         : []),
       {
-        headerName: "Ruoli",
+        headerName: t("common.roles"),
         valueGetter: (params) =>
           params.data?.user_roles
-            ?.map((ur: { roles: { name: string } }) => ROLE_LABELS[ur.roles.name] ?? ur.roles.name)
+            ?.map((ur: { roles: { name: string } }) => t(ROLE_LABELS[ur.roles.name] ?? ur.roles.name))
             .join(", ") ?? "",
         filter: "agTextColumnFilter",
       },
       {
-        headerName: "Stato",
+        headerName: t("common.status"),
         field: "is_active",
         filter: "agTextColumnFilter",
-        valueFormatter: (params) => (params.value ? "Attivo" : "Disattivo"),
+        valueFormatter: (params) => (params.value ? t("common.active") : t("common.inactive")),
       },
       {
-        headerName: "Azioni",
+        headerName: t("common.actions"),
         sortable: false,
         filter: false,
         resizable: false,
@@ -141,9 +143,9 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
                 onClick={() => handleToggle(user.id, user.is_active)}
               >
                 {user.is_active ? (
-                  <><Ban className="h-4 w-4 mr-1" />Disattiva</>
+                  <><Ban className="h-4 w-4 mr-1" />{t("common.deactivate")}</>
                 ) : (
-                  <><RefreshCw className="h-4 w-4 mr-1" />Riattiva</>
+                  <><RefreshCw className="h-4 w-4 mr-1" />{t("common.reactivate")}</>
                 )}
               </Button>
             </div>
@@ -152,7 +154,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
       },
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isSuperadmin]
+    [isSuperadmin, t]
   );
 
   return (
@@ -160,38 +162,38 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Users className="h-6 w-6" />
-          Utenti
+          {t("users.title")}
         </h1>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger render={<Button />}>
             <Plus className="h-4 w-4 mr-2" />
-            Nuovo Utente
+            {t("users.newUser")}
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Crea Nuovo Utente</DialogTitle>
+              <DialogTitle>{t("users.createNewUser")}</DialogTitle>
             </DialogHeader>
             <form action={handleCreateUser} className="space-y-4">
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">Nome</Label>
+                  <Label htmlFor="firstName">{t("subjects.firstName")}</Label>
                   <Input id="firstName" name="firstName" required />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Cognome</Label>
+                  <Label htmlFor="lastName">{t("subjects.lastName")}</Label>
                   <Input id="lastName" name="lastName" required />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("common.email")}</Label>
                 <Input id="email" name="email" type="email" required />
               </div>
               {isSuperadmin && (
                 <div className="space-y-2">
-                  <Label htmlFor="organizationId">Organizzazione</Label>
+                  <Label htmlFor="organizationId">{t("users.organization")}</Label>
                   <Select name="organizationId">
                     <SelectTrigger>
-                      <SelectValue placeholder="Seleziona organizzazione" />
+                      <SelectValue placeholder={t("users.selectOrganization")} />
                     </SelectTrigger>
                     <SelectContent>
                       {organizations.map((org) => (
@@ -204,7 +206,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
                 </div>
               )}
               <div className="space-y-2">
-                <Label>Ruoli</Label>
+                <Label>{t("common.roles")}</Label>
                 <div className="space-y-2">
                   {availableRoles.map((role) => (
                     <label
@@ -217,7 +219,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
                         value={role.name}
                         className="rounded"
                       />
-                      {role.label}
+                      {t(role.label)}
                     </label>
                   ))}
                 </div>
@@ -229,11 +231,11 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
                   onClick={() => setDialogOpen(false)}
                 >
                   <X className="h-4 w-4 mr-1" />
-                  Annulla
+                  {t("common.cancel")}
                 </Button>
                 <Button type="submit" disabled={isLoading}>
                   <UserPlus className="h-4 w-4 mr-1" />
-                  {isLoading ? "Creazione..." : "Crea Utente"}
+                  {isLoading ? t("common.creating") : t("users.createUser")}
                 </Button>
               </div>
             </form>
@@ -252,7 +254,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
                 {user.first_name} {user.last_name}
               </span>
               <Badge variant={user.is_active ? "default" : "secondary"}>
-                {user.is_active ? "Attivo" : "Disattivo"}
+                {user.is_active ? t("common.active") : t("common.inactive")}
               </Badge>
             </div>
             <div className="text-sm text-muted-foreground">{user.email}</div>
@@ -264,7 +266,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
             <div className="flex gap-1 flex-wrap">
               {user.user_roles.map((ur) => (
                 <Badge key={ur.roles.name} variant="outline">
-                  {ROLE_LABELS[ur.roles.name] ?? ur.roles.name}
+                  {t(ROLE_LABELS[ur.roles.name] ?? ur.roles.name)}
                 </Badge>
               ))}
             </div>
@@ -274,7 +276,7 @@ export function UsersPageClient({ users, organizations, isSuperadmin }: Props) {
               className="w-full"
               onClick={() => handleToggle(user.id, user.is_active)}
             >
-              {user.is_active ? "Disattiva" : "Riattiva"}
+              {user.is_active ? t("common.deactivate") : t("common.reactivate")}
             </Button>
           </div>
         )}

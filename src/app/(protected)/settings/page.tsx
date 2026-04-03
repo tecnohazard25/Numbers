@@ -42,6 +42,7 @@ import {
   seedVatCodesForCurrentOrg,
 } from "@/app/actions/vat-codes";
 import type { VatCode } from "@/types/supabase";
+import { useTranslation } from "@/lib/i18n/context";
 
 const NATURE_OPTIONS = [
   { value: "", label: "Nessuna" },
@@ -69,6 +70,7 @@ const NATURE_OPTIONS = [
 ];
 
 export default function SettingsPage() {
+  const { t } = useTranslation();
   const router = useRouter();
   const [authorized, setAuthorized] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
@@ -155,7 +157,7 @@ export default function SettingsPage() {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Codice IVA aggiornato");
+        toast.success(t("settings.vatCodes.updated"));
         setVatFormOpen(false);
         loadVatCodes();
       }
@@ -169,7 +171,7 @@ export default function SettingsPage() {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Codice IVA creato");
+        toast.success(t("settings.vatCodes.created"));
         setVatFormOpen(false);
         loadVatCodes();
       }
@@ -184,7 +186,7 @@ export default function SettingsPage() {
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Codice IVA eliminato");
+      toast.success(t("settings.vatCodes.deleted"));
       setVatDeleteTarget(null);
       loadVatCodes();
     }
@@ -197,7 +199,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold flex items-center gap-2">
         <Settings className="h-6 w-6" />
-        Impostazioni
+        {t("settings.title")}
       </h1>
 
       <Card>
@@ -205,26 +207,26 @@ export default function SettingsPage() {
           <div>
             <CardTitle className="flex items-center gap-2">
               <Receipt className="h-5 w-5" />
-              Codici IVA
+              {t("settings.vatCodes.title")}
             </CardTitle>
             <CardDescription>
-              Gestisci i codici IVA per la fatturazione
+              {t("settings.vatCodes.description")}
             </CardDescription>
           </div>
           <Button size="sm" onClick={openVatCreateForm}>
             <Plus className="h-4 w-4 mr-1" />
-            Nuovo Codice
+            {t("settings.vatCodes.newCode")}
           </Button>
         </CardHeader>
         <CardContent>
           {loadingVatCodes ? (
             <p className="text-muted-foreground text-center py-8">
-              Caricamento...
+              {t("common.loading")}
             </p>
           ) : vatCodes.length === 0 ? (
             <div className="text-center py-8 space-y-4">
               <p className="text-muted-foreground">
-                Nessun codice IVA configurato.
+                {t("settings.vatCodes.noCodesConfigured")}
               </p>
               <Button
                 variant="outline"
@@ -234,7 +236,7 @@ export default function SettingsPage() {
                   if (result.error) {
                     toast.error(result.error);
                   } else {
-                    toast.success("Codici IVA italiani caricati");
+                    toast.success(t("settings.vatCodes.italianCodesLoaded"));
                     loadVatCodes();
                   }
                   setIsSubmitting(false);
@@ -242,7 +244,7 @@ export default function SettingsPage() {
                 disabled={isSubmitting}
               >
                 <Receipt className="h-4 w-4 mr-1" />
-                {isSubmitting ? "Caricamento..." : "Popola con codici IVA italiani"}
+                {isSubmitting ? t("common.loading") : t("settings.vatCodes.seedItalianCodes")}
               </Button>
             </div>
           ) : (
@@ -264,8 +266,8 @@ export default function SettingsPage() {
                       </span>
                       <span className="text-xs text-muted-foreground">
                         {vc.rate > 0 ? `${vc.rate}%` : "0%"}
-                        {vc.nature && ` — Natura: ${vc.nature}`}
-                        {!vc.is_active && " — Disattivato"}
+                        {vc.nature && ` — ${t("settings.vatCodes.nature")}: ${vc.nature}`}
+                        {!vc.is_active && ` — ${t("settings.vatCodes.deactivated")}`}
                       </span>
                     </div>
                   </div>
@@ -297,22 +299,22 @@ export default function SettingsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingVatCode ? "Modifica Codice IVA" : "Nuovo Codice IVA"}
+              {editingVatCode ? t("settings.vatCodes.editCode") : t("settings.vatCodes.newCodeTitle")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="vatCode">Codice</Label>
+                <Label htmlFor="vatCode">{t("settings.vatCodes.code")}</Label>
                 <Input
                   id="vatCode"
                   value={vatFormCode}
                   onChange={(e) => setVatFormCode(e.target.value)}
-                  placeholder="es. 22, N1, N2.1..."
+                  placeholder={t("settings.vatCodes.codePlaceholder")}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="vatRate">Aliquota %</Label>
+                <Label htmlFor="vatRate">{t("settings.vatCodes.rate")}</Label>
                 <Input
                   id="vatRate"
                   type="number"
@@ -325,22 +327,22 @@ export default function SettingsPage() {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="vatDescription">Descrizione</Label>
+              <Label htmlFor="vatDescription">{t("settings.vatCodes.description")}</Label>
               <Input
                 id="vatDescription"
                 value={vatFormDescription}
                 onChange={(e) => setVatFormDescription(e.target.value)}
-                placeholder="es. IVA 22% - Aliquota ordinaria"
+                placeholder={t("settings.vatCodes.descriptionPlaceholder")}
               />
             </div>
             <div className="space-y-2">
-              <Label>Natura (per aliquota 0%)</Label>
+              <Label>{t("settings.vatCodes.nature")}</Label>
               <Select
                 value={vatFormNature}
                 onValueChange={(v) => setVatFormNature(v ?? "")}
               >
                 <SelectTrigger className="!w-full min-w-0 overflow-hidden whitespace-normal">
-                  <SelectValue placeholder="Seleziona natura" className="truncate">
+                  <SelectValue placeholder={t("settings.vatCodes.selectNature")} className="truncate">
                     {vatFormNature
                       ? <span className="truncate">{NATURE_OPTIONS.find((n) => n.value === vatFormNature)?.label ?? vatFormNature}</span>
                       : null}
@@ -349,7 +351,7 @@ export default function SettingsPage() {
                 <SelectContent className="max-w-[min(28rem,90vw)]">
                   {NATURE_OPTIONS.map((n) => (
                     <SelectItem key={n.value || "_none"} value={n.value} className="whitespace-normal">
-                      {n.label}
+                      {n.value === "" ? t("settings.vatCodes.none") : n.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -364,14 +366,14 @@ export default function SettingsPage() {
                   onChange={(e) => setVatFormIsActive(e.target.checked)}
                   className="h-4 w-4 rounded border-gray-300"
                 />
-                <Label htmlFor="vatIsActive">Attivo</Label>
+                <Label htmlFor="vatIsActive">{t("settings.vatCodes.isActive")}</Label>
               </div>
             )}
           </div>
           <div className="flex justify-end gap-3 mt-2">
             <Button variant="outline" onClick={() => setVatFormOpen(false)}>
               <X className="h-4 w-4 mr-1" />
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button
               onClick={handleVatSave}
@@ -379,10 +381,10 @@ export default function SettingsPage() {
             >
               <Save className="h-4 w-4 mr-1" />
               {isSubmitting
-                ? "Salvataggio..."
+                ? t("common.saving")
                 : editingVatCode
-                  ? "Aggiorna"
-                  : "Crea"}
+                  ? t("common.update")
+                  : t("common.create")}
             </Button>
           </div>
         </DialogContent>
@@ -392,15 +394,17 @@ export default function SettingsPage() {
       <Dialog open={!!vatDeleteTarget} onOpenChange={(open) => !open && setVatDeleteTarget(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Conferma Eliminazione</DialogTitle>
+            <DialogTitle>{t("settings.vatCodes.confirmDelete")}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Sei sicuro di voler eliminare il codice IVA{" "}
-            <strong>{vatDeleteTarget?.code} — {vatDeleteTarget?.description}</strong>?
+            {t("settings.vatCodes.confirmDeleteDesc", {
+              code: vatDeleteTarget?.code ?? "",
+              description: vatDeleteTarget?.description ?? "",
+            })}
           </p>
           <div className="flex justify-end gap-3 mt-4">
             <Button variant="outline" onClick={() => setVatDeleteTarget(null)}>
-              Annulla
+              {t("common.cancel")}
             </Button>
             <Button
               variant="destructive"
@@ -408,7 +412,7 @@ export default function SettingsPage() {
               disabled={isSubmitting}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              {isSubmitting ? "Eliminazione..." : "Elimina"}
+              {isSubmitting ? t("common.deleting") : t("common.delete")}
             </Button>
           </div>
         </DialogContent>

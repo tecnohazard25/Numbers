@@ -7,9 +7,11 @@ import { OrganizationsTable } from "./organizations-table";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Building2, Plus } from "lucide-react";
+import { useTranslation } from "@/lib/i18n/context";
 
 export default function SuperadminPage() {
   const router = useRouter();
+  const { t } = useTranslation();
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [authorized, setAuthorized] = useState(false);
 
@@ -36,12 +38,12 @@ export default function SuperadminPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Building2 className="h-6 w-6" />
-          Organizzazioni
+          {t("orgs.title")}
         </h1>
         <Link href="/superadmin/organizations/new">
           <Button>
             <Plus className="h-4 w-4 mr-2" />
-            Nuova Organizzazione
+            {t("orgs.newOrg")}
           </Button>
         </Link>
       </div>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { AppLayout } from "@/components/app-layout";
 import { ImpersonationBanner } from "@/components/impersonation-banner";
+import { I18nProvider } from "@/lib/i18n/context";
 
 interface ImpersonationInfo {
   userId: string;
@@ -21,6 +22,7 @@ export default function ProtectedLayout({
   const router = useRouter();
   const [roles, setRoles] = useState<string[]>([]);
   const [userName, setUserName] = useState("");
+  const [locale, setLocale] = useState("it-IT");
   const [impersonating, setImpersonating] = useState<ImpersonationInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -46,6 +48,7 @@ export default function ProtectedLayout({
 
       setRoles(data.roles ?? []);
       setUserName(data.userName ?? "");
+      setLocale(data.profile?.locale ?? "it-IT");
       setImpersonating(data.impersonating ?? null);
       setLoading(false);
     }
@@ -62,7 +65,7 @@ export default function ProtectedLayout({
   }
 
   return (
-    <>
+    <I18nProvider locale={locale}>
       {impersonating && (
         <ImpersonationBanner
           name={impersonating.name}
@@ -72,6 +75,6 @@ export default function ProtectedLayout({
       <AppLayout roles={roles} userName={userName}>
         {children}
       </AppLayout>
-    </>
+    </I18nProvider>
   );
 }

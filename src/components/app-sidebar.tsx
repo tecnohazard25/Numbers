@@ -26,6 +26,7 @@ import { cn } from "@/lib/utils";
 import { logoutAction } from "@/app/actions/auth";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslation } from "@/lib/i18n/context";
 
 type NavItem = {
   title: string;
@@ -40,25 +41,26 @@ interface AppSidebarProps {
 
 export function AppSidebar({ roles, userName }: AppSidebarProps) {
   const pathname = usePathname();
+  const { t } = useTranslation();
 
   const superadminItems: NavItem[] = [
-    { title: "Organization", url: "/superadmin", icon: Building2 },
+    { title: t("sidebar.organizations"), url: "/superadmin", icon: Building2 },
   ];
 
   const orgAdminItems: NavItem[] = [
-    { title: "Utenti", url: "/org/users", icon: Users },
+    { title: t("sidebar.users"), url: "/org/users", icon: Users },
   ];
 
   const commonItems: NavItem[] = [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: t("sidebar.dashboard"), url: "/dashboard", icon: LayoutDashboard },
   ];
 
   const anagraficaItems: NavItem[] = [
-    { title: "Soggetti", url: "/subjects", icon: Contact2 },
+    { title: t("sidebar.subjects"), url: "/subjects", icon: Contact2 },
   ];
 
   const settingsItems: NavItem[] = [
-    { title: "Impostazioni", url: "/settings", icon: Settings },
+    { title: t("sidebar.settings"), url: "/settings", icon: Settings },
   ];
 
   const isSuperadmin = roles.includes("superadmin");
@@ -78,7 +80,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
       <SidebarContent>
         {isSuperadmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Super Admin</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("sidebar.superAdmin")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {superadminItems.map((item) => (
@@ -98,7 +100,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
         )}
         {isOrgAdmin && (
           <SidebarGroup>
-            <SidebarGroupLabel>Gestione Utenti</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("sidebar.userManagement")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {orgAdminItems.map((item) => (
@@ -118,7 +120,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
         )}
         {hasAnagraficaAccess && (
           <SidebarGroup>
-            <SidebarGroupLabel>Anagrafica</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("sidebar.registry")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {anagraficaItems.map((item) => (
@@ -138,7 +140,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
         )}
         {roles.includes("accountant") && (
           <SidebarGroup>
-            <SidebarGroupLabel>Configurazione</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("sidebar.configuration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {settingsItems.map((item) => (
@@ -157,7 +159,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
           </SidebarGroup>
         )}
         <SidebarGroup>
-          <SidebarGroupLabel>Generale</SidebarGroupLabel>
+          <SidebarGroupLabel>{t("sidebar.general")}</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {commonItems.map((item) => (
@@ -176,7 +178,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
         <Link
           href="/change-password"
           className="flex items-center gap-2 text-sm text-muted-foreground mb-2 truncate hover:text-foreground transition-colors"
-          title="Cambia password"
+          title={t("sidebar.changePassword")}
         >
           <Settings className="h-4 w-4 shrink-0" />
           <span className="truncate">{userName}</span>
@@ -190,7 +192,7 @@ export function AppSidebar({ roles, userName }: AppSidebarProps) {
             )}
           >
             <LogOut className="h-4 w-4 mr-2" />
-            Esci
+            {t("auth.logout")}
           </button>
         </form>
       </SidebarFooter>
