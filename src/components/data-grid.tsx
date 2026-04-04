@@ -114,6 +114,61 @@ function ImportExportMenu({
   );
 }
 
+// --- Custom action dropdown ---
+function CustomActionDropdown<T>({
+  action,
+  selectedRows,
+  isDisabled,
+  countLabel,
+}: {
+  action: DataGridCustomAction<T>;
+  selectedRows: T[];
+  isDisabled: boolean;
+  countLabel: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        variant={(action.variant as "default" | "outline" | "ghost" | "destructive") ?? "outline"}
+        size="sm"
+        disabled={isDisabled}
+        onClick={() => setOpen((v) => !v)}
+      >
+        {action.icon}
+        {action.label}{countLabel}
+      </Button>
+      {open && (
+        <div className="absolute left-0 top-full mt-1 z-50 min-w-[220px] rounded-md border bg-popover shadow-md py-1">
+          {action.children!.map((child, ci) => (
+            <button
+              key={ci}
+              type="button"
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left disabled:opacity-50"
+              disabled={child.disabled}
+              onClick={() => { child.onClick(selectedRows); setOpen(false); }}
+            >
+              {child.icon}
+              {child.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // --- Themes ---
 const baseThemeParams = {
   fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -183,9 +238,11 @@ export interface DataGridCustomAction<T> {
   label: string;
   icon?: ReactNode;
   variant?: "default" | "outline" | "ghost" | "destructive";
-  onClick: (selectedRows: T[]) => void;
+  onClick?: (selectedRows: T[]) => void;
   requiresSelection?: boolean;
   disabled?: boolean;
+  /** Sub-items for a dropdown group button */
+  children?: { label: string; icon?: ReactNode; onClick: (selectedRows: T[]) => void; disabled?: boolean }[];
 }
 
 interface DataGridProps<T> {
@@ -916,18 +973,36 @@ export function DataGrid<T>({
               {t("common.delete")} {effectiveSelectedRows.length > 0 && `(${effectiveSelectedRows.length})`}
             </Button>
           )}
-          {customActions?.map((action, idx) => (
-            <Button
-              key={idx}
-              variant={(action.variant as "default" | "outline" | "ghost" | "destructive") ?? "outline"}
-              size="sm"
-              disabled={action.disabled || (action.requiresSelection !== false && effectiveSelectedRows.length === 0)}
-              onClick={() => action.onClick(effectiveSelectedRows)}
-            >
-              {action.icon}
-              {action.label} {action.requiresSelection !== false && effectiveSelectedRows.length > 0 && `(${effectiveSelectedRows.length})`}
-            </Button>
-          ))}
+          {customActions?.map((action, idx) => {
+            const isDisabled = action.disabled || (action.requiresSelection !== false && effectiveSelectedRows.length === 0);
+            const countLabel = action.requiresSelection !== false && effectiveSelectedRows.length > 0 ? ` (${effectiveSelectedRows.length})` : "";
+
+            if (action.children && action.children.length > 0) {
+              // Dropdown group
+              return (
+                <CustomActionDropdown
+                  key={idx}
+                  action={action}
+                  selectedRows={effectiveSelectedRows}
+                  isDisabled={isDisabled}
+                  countLabel={countLabel}
+                />
+              );
+            }
+
+            return (
+              <Button
+                key={idx}
+                variant={(action.variant as "default" | "outline" | "ghost" | "destructive") ?? "outline"}
+                size="sm"
+                disabled={isDisabled}
+                onClick={() => action.onClick?.(effectiveSelectedRows)}
+              >
+                {action.icon}
+                {action.label}{countLabel}
+              </Button>
+            );
+          })}
           {/* Gmail-style "select all pages" inline */}
           {showSelectAllBanner && (
             <span className="text-xs text-muted-foreground">

@@ -627,72 +627,75 @@ export default function TransactionsPage() {
             ] : undefined}
             customActions={canWrite && leafNodes.length > 0 ? [
               {
-                label: "AI",
-                icon: isClassifyingBulk ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1" />,
+                label: t("transactions.assignAccount"),
+                icon: isClassifyingBulk ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <FolderInput className="h-4 w-4 mr-1" />,
                 variant: "outline" as const,
                 disabled: isClassifyingBulk,
                 requiresSelection: true,
-                onClick: async (selected) => {
-                  const toClassify = selected.filter((tx) => !tx.is_balance_row && !tx.reclassification_nodes);
-                  if (toClassify.length === 0) {
-                    toast.info("Tutte le righe selezionate hanno già un conto");
-                    return;
-                  }
-                  setIsClassifyingBulk(true);
-                  const batchResult = await classifyTransactionsBatchAction(
-                    toClassify.map((tx) => ({
-                      id: tx.id,
-                      description: [tx.description, tx.reference].filter(Boolean).join(" — ") || "",
-                      direction: tx.direction,
-                      amount: Number(tx.amount),
-                    })),
-                    leafNodes.map((n) => ({ full_code: n.full_code, name: n.name, sign: n.sign }))
-                  );
-
-                  if (!batchResult.success) {
-                    toast.error(batchResult.error);
-                    setIsClassifyingBulk(false);
-                    return;
-                  }
-
-                  let classified = 0;
-                  for (const tx of toClassify) {
-                    const suggestion = batchResult.results[tx.id];
-                    if (suggestion?.confident && suggestion.full_code) {
-                      const matched = leafNodes.find((n) => n.full_code === suggestion.full_code);
-                      if (matched) {
-                        await updateTransactionAction(tx.id, {
-                          collection_resource_id: tx.collection_resource_id,
+                children: [
+                  {
+                    label: t("transactions.assignAccountAuto"),
+                    icon: <Sparkles className="h-3.5 w-3.5" />,
+                    disabled: isClassifyingBulk,
+                    onClick: async (selected) => {
+                      const toClassify = selected.filter((tx) => !tx.is_balance_row && !tx.reclassification_nodes);
+                      if (toClassify.length === 0) {
+                        toast.info("Tutte le righe selezionate hanno già un conto");
+                        return;
+                      }
+                      setIsClassifyingBulk(true);
+                      const batchResult = await classifyTransactionsBatchAction(
+                        toClassify.map((tx) => ({
+                          id: tx.id,
+                          description: [tx.description, tx.reference].filter(Boolean).join(" — ") || "",
                           direction: tx.direction,
                           amount: Number(tx.amount),
-                          transaction_date: tx.transaction_date,
-                          description: tx.description,
-                          reference: tx.reference,
-                          is_balance_row: tx.is_balance_row,
-                          reclassification_node_id: matched.id,
-                        });
-                        classified++;
+                        })),
+                        leafNodes.map((n) => ({ full_code: n.full_code, name: n.name, sign: n.sign }))
+                      );
+                      if (!batchResult.success) {
+                        toast.error(batchResult.error);
+                        setIsClassifyingBulk(false);
+                        return;
                       }
-                    }
-                  }
-                  setIsClassifyingBulk(false);
-                  if (classified > 0) {
-                    toast.success(`${classified}/${toClassify.length} movimenti classificati`);
-                    loadTransactions();
-                  } else {
-                    toast.info("L'AI non è riuscita a classificare i movimenti selezionati");
-                  }
-                },
-              },
-              {
-                label: t("transactions.assignAccount"),
-                icon: <FolderInput className="h-4 w-4 mr-1" />,
-                variant: "outline" as const,
-                requiresSelection: true,
-                onClick: (selected) => {
-                  setAssignTargets(selected.filter((tx) => !tx.is_balance_row));
-                  setAssignAccountOpen(true);
-                },
+                      let classified = 0;
+                      for (const tx of toClassify) {
+                        const suggestion = batchResult.results[tx.id];
+                        if (suggestion?.confident && suggestion.full_code) {
+                          const matched = leafNodes.find((n) => n.full_code === suggestion.full_code);
+                          if (matched) {
+                            await updateTransactionAction(tx.id, {
+                              collection_resource_id: tx.collection_resource_id,
+                              direction: tx.direction,
+                              amount: Number(tx.amount),
+                              transaction_date: tx.transaction_date,
+                              description: tx.description,
+                              reference: tx.reference,
+                              is_balance_row: tx.is_balance_row,
+                              reclassification_node_id: matched.id,
+                            });
+                            classified++;
+                          }
+                        }
+                      }
+                      setIsClassifyingBulk(false);
+                      if (classified > 0) {
+                        toast.success(`${classified}/${toClassify.length} movimenti classificati`);
+                        loadTransactions();
+                      } else {
+                        toast.info("L'AI non è riuscita a classificare i movimenti selezionati");
+                      }
+                    },
+                  },
+                  {
+                    label: t("transactions.assignAccountManual"),
+                    icon: <FolderInput className="h-3.5 w-3.5" />,
+                    onClick: (selected) => {
+                      setAssignTargets(selected.filter((tx) => !tx.is_balance_row));
+                      setAssignAccountOpen(true);
+                    },
+                  },
+                ],
               },
             ] : undefined}
             renderMobileCard={(tx) => (
