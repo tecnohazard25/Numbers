@@ -359,6 +359,7 @@ interface NodeInput {
   parentId: string | null;
   code: string;
   name: string;
+  description?: string | null;
   sign: ReclassificationNodeSign;
   isTotal?: boolean;
   formula?: string | null;
@@ -437,6 +438,7 @@ export async function createNodeAction(data: NodeInput) {
       code: data.code.trim(),
       full_code: "", // Will be computed by trigger
       name: data.name.trim(),
+      description: data.description?.trim() || null,
       sign,
       order_index: maxOrder + 1,
       is_total: data.isTotal ?? false,
@@ -457,6 +459,7 @@ export async function createNodeAction(data: NodeInput) {
 interface NodeUpdateInput {
   code?: string;
   name?: string;
+  description?: string | null;
   sign?: ReclassificationNodeSign;
   orderIndex?: number;
   isTotal?: boolean;
@@ -496,6 +499,7 @@ export async function updateNodeAction(nodeId: string, data: NodeUpdateInput) {
     if (!data.name?.trim()) return { error: "Nome obbligatorio" };
     updates.name = data.name.trim();
   }
+  if (data.description !== undefined) updates.description = data.description?.trim() || null;
   // Sign can only be changed on root nodes; children inherit from root
   const signChanged = data.sign !== undefined && !node.parent_id;
   if (signChanged) updates.sign = data.sign;

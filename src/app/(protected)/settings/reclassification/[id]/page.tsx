@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, FileSpreadsheet, Plus } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, Plus, ChevronsDownUp } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/context";
@@ -174,7 +174,18 @@ export default function TemplateEditorPage() {
     if (orgId || isSuperadmin) loadData();
   }, [orgId, isSuperadmin, loadData]);
 
+  // Tree search
+  const [treeSearch, setTreeSearch] = useState("");
+
   // Handlers
+  function handleExpandAll() {
+    setExpandedIds(new Set(nodes.map((n) => n.id)));
+  }
+
+  function handleCollapseAll() {
+    setExpandedIds(new Set());
+  }
+
   function handleToggleExpand(nodeId: string) {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -342,7 +353,35 @@ export default function TemplateEditorPage() {
       {/* Split view */}
       <div className="flex flex-1 min-h-0 gap-4">
         {/* Left panel — Tree */}
-        <div className="w-full md:w-2/5 lg:w-1/3 border rounded-lg overflow-auto p-2">
+        <div className="w-full md:w-2/5 lg:w-1/3 border rounded-lg flex flex-col min-h-0">
+          {/* Tree toolbar */}
+          <div className="flex items-center gap-1 p-2 border-b shrink-0">
+            <Input
+              value={treeSearch}
+              onChange={(e) => setTreeSearch(e.target.value)}
+              placeholder={t("common.search")}
+              className="h-7 text-xs flex-1"
+            />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={handleExpandAll}
+              title={t("reclassification.expandAll")}
+            >
+              <ChevronsDownUp className="h-3.5 w-3.5 rotate-180" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7 shrink-0"
+              onClick={handleCollapseAll}
+              title={t("reclassification.collapseAll")}
+            >
+              <ChevronsDownUp className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+          <div className="flex-1 overflow-auto p-2">
           {tree.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-8 text-center text-muted-foreground text-sm">
               <p>{t("reclassification.noTemplates")}</p>
@@ -372,8 +411,10 @@ export default function TemplateEditorPage() {
               onAddChild={handleAddChild}
               isAccountant={canEdit}
               isNonBaseSchema={isNonBaseSchema}
+              searchQuery={treeSearch}
             />
           )}
+          </div>
         </div>
 
         {/* Right panel — Node form (desktop only) */}

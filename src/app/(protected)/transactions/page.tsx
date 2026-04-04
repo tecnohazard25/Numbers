@@ -23,6 +23,7 @@ import {
   ArrowLeftRight,
   Loader2,
   Paperclip,
+  FolderInput,
   Pencil,
   Search,
   Sparkles,
@@ -34,6 +35,7 @@ import { TransactionDirectionBadge } from "@/components/transactions/Transaction
 import { TransactionTotals } from "@/components/transactions/TransactionTotals";
 import { TransactionForm } from "./_components/transaction-form";
 import { ImportDialog } from "@/components/transactions/import/ImportDialog";
+import { AccountPicker, type AccountNode } from "@/components/account-picker";
 import { useTranslation } from "@/lib/i18n/context";
 import type {
   CollectionResource,
@@ -86,6 +88,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(true);
   const [canWrite, setCanWrite] = useState(false);
   const [leafNodes, setLeafNodes] = useState<{ full_code: string; name: string; sign: "positive" | "negative"; id: string }[]>([]);
+  const [accountNodes, setAccountNodes] = useState<AccountNode[]>([]);
   const [isClassifyingBulk, setIsClassifyingBulk] = useState(false);
 
   // Filters
@@ -98,6 +101,8 @@ export default function TransactionsPage() {
   // Form dialog
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
+  const [assignAccountOpen, setAssignAccountOpen] = useState(false);
+  const [assignTargets, setAssignTargets] = useState<TransactionRow[]>([]);
   const [editingTx, setEditingTx] = useState<{
     id: string;
     collection_resource_id: string;
@@ -155,6 +160,12 @@ export default function TransactionsPage() {
               .map((n: { id: string; full_code: string; name: string; sign: string }) => ({
                 id: n.id, full_code: n.full_code, name: n.name, sign: n.sign as "positive" | "negative",
               }))
+          );
+          setAccountNodes(
+            allN.map((n: { id: string; full_code: string; name: string; parent_id: string | null; sign?: string; is_total?: boolean }) => ({
+              id: n.id, full_code: n.full_code, name: n.name, parent_id: n.parent_id,
+              sign: n.sign as "positive" | "negative" | undefined, is_total: n.is_total,
+            }))
           );
         }
       } catch { /* ignore */ }
@@ -522,7 +533,48 @@ export default function TransactionsPage() {
 
       {/* Date range filters */}
       {selectedResourceId && (
-        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 shrink-0">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 shrink-0 flex-wrap">
+          {/* Period presets */}
+          <div className="flex items-center gap-1">
+            {([
+              { label: t("transactions.thisMonth"), getRange: () => {
+                const now = new Date();
+                return { from: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`, to: "" };
+              }},
+              { label: t("transactions.thisQuarter"), getRange: () => {
+                const now = new Date();
+                const qStart = Math.floor(now.getMonth() / 3) * 3;
+                return { from: `${now.getFullYear()}-${String(qStart + 1).padStart(2, "0")}-01`, to: "" };
+              }},
+              { label: t("transactions.thisYear"), getRange: () => {
+                return { from: `${new Date().getFullYear()}-01-01`, to: "" };
+              }},
+            ] as const).map((preset) => (
+              <Button
+                key={preset.label}
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs cursor-pointer"
+                onClick={() => {
+                  const { from, to } = preset.getRange();
+                  setDateFrom(from);
+                  setDateTo(to);
+                }}
+              >
+                {preset.label}
+              </Button>
+            ))}
+            {(dateFrom || dateTo) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs cursor-pointer"
+                onClick={() => { setDateFrom(""); setDateTo(""); }}
+              >
+                ✕
+              </Button>
+            )}
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground whitespace-nowrap">
               {t("transactions.dateFrom")}:
@@ -630,6 +682,16 @@ export default function TransactionsPage() {
                   } else {
                     toast.info("L'AI non è riuscita a classificare i movimenti selezionati");
                   }
+                },
+              },
+              {
+                label: t("transactions.assignAccount"),
+                icon: <FolderInput className="h-4 w-4 mr-1" />,
+                variant: "outline" as const,
+                requiresSelection: true,
+                onClick: (selected) => {
+                  setAssignTargets(selected.filter((tx) => !tx.is_balance_row));
+                  setAssignAccountOpen(true);
                 },
               },
             ] : undefined}
@@ -797,6 +859,46 @@ export default function TransactionsPage() {
         resources={resources}
         onComplete={() => loadTransactions()}
       />
+
+      {/* Assign account dialog */}
+      <Dialog open={assignAccountOpen} onOpenChange={setAssignAccountOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("transactions.assignAccountToSelected")}</DialogTitle>
+            <DialogDescription className="sr-only">
+              {t("transactions.assignAccountToSelected")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {assignTargets.length} {t("common.rows")}
+            </p>
+            <AccountPicker
+              nodes={accountNodes}
+              value=""
+              onChange={async (nodeId) => {
+                if (!nodeId) return;
+                for (const tx of assignTargets) {
+                  await updateTransactionAction(tx.id, {
+                    collection_resource_id: tx.collection_resource_id,
+                    direction: tx.direction,
+                    amount: Number(tx.amount),
+                    transaction_date: tx.transaction_date,
+                    description: tx.description,
+                    reference: tx.reference,
+                    is_balance_row: tx.is_balance_row,
+                    reclassification_node_id: nodeId,
+                  });
+                }
+                toast.success(t("transactions.accountAssigned").replace("{count}", String(assignTargets.length)));
+                setAssignAccountOpen(false);
+                setAssignTargets([]);
+                loadTransactions();
+              }}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

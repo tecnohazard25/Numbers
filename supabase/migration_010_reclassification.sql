@@ -59,6 +59,7 @@ CREATE TABLE reclassification_nodes (
   name text NOT NULL,
   sign reclassification_node_sign NOT NULL DEFAULT 'positive',
   order_index integer NOT NULL DEFAULT 0,
+  description text,
   is_total boolean NOT NULL DEFAULT false,
   formula text,
   created_at timestamptz NOT NULL DEFAULT now(),

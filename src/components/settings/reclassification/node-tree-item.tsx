@@ -11,6 +11,7 @@ interface NodeTreeItemProps {
   hasChildren: boolean;
   isExpanded: boolean;
   isSelected: boolean;
+  isSearchMatch?: boolean;
   isAccountant: boolean;
   showDropBefore: boolean;
   showDropInside: boolean;
@@ -25,6 +26,7 @@ export function NodeTreeItem({
   hasChildren,
   isExpanded,
   isSelected,
+  isSearchMatch = false,
   isAccountant,
   showDropBefore,
   showDropInside,
@@ -71,7 +73,9 @@ export function NodeTreeItem({
         } ${
           isSelected
             ? "bg-accent text-accent-foreground"
-            : "hover:bg-muted/50"
+            : isSearchMatch
+              ? "bg-yellow-100/60 dark:bg-yellow-900/20"
+              : "hover:bg-muted/50"
         } ${isDragging ? "opacity-30" : ""}`}
         onClick={() => onSelectNode(node.id)}
       >

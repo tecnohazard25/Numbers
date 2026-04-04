@@ -64,6 +64,7 @@ export function NodeDetailForm({
   // Fields
   const [code, setCode] = useState(node.code);
   const [name, setName] = useState(node.name);
+  const [description, setDescription] = useState(node.description ?? "");
   const [sign, setSign] = useState<ReclassificationNodeSign>(node.sign);
   const [isTotal, setIsTotal] = useState(node.is_total);
   const [formula, setFormula] = useState(node.formula ?? "");
@@ -86,6 +87,7 @@ export function NodeDetailForm({
   useEffect(() => {
     setCode(node.code);
     setName(node.name);
+    setDescription(node.description ?? "");
     setSign(node.sign);
     setIsTotal(node.is_total);
     setFormula(node.formula ?? "");
@@ -100,6 +102,7 @@ export function NodeDetailForm({
   const hasChanges =
     code !== node.code ||
     name !== node.name ||
+    description !== (node.description ?? "") ||
     sign !== node.sign ||
     isTotal !== node.is_total ||
     (useCustomFormula ? formula !== (node.formula ?? "") : false);
@@ -156,6 +159,7 @@ export function NodeDetailForm({
     const result = await updateNodeAction(node.id, {
       code,
       name,
+      description: description || null,
       sign,
       isTotal,
       formula: useCustomFormula && isTotal ? formula : null,
@@ -235,6 +239,17 @@ export function NodeDetailForm({
                 disabled={!isAccountant}
               />
             </div>
+          </div>
+          <div className="space-y-1 mt-3">
+            <Label className="text-xs">{t("reclassification.node.description")}</Label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder={t("reclassification.node.descriptionPlaceholder")}
+              disabled={!isAccountant}
+              rows={2}
+              className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-xs placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+            />
           </div>
         </CardContent>
       </Card>

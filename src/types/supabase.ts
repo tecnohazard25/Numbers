@@ -267,6 +267,7 @@ export type ReclassificationNode = {
   name: string;
   sign: ReclassificationNodeSign;
   order_index: number;
+  description: string | null;
   is_total: boolean;
   formula: string | null;
   created_at: string;
@@ -280,4 +281,152 @@ export type ReclassificationNodeRef = {
 
 export type ReclassificationNodeWithChildren = ReclassificationNode & {
   children: ReclassificationNodeWithChildren[];
+};
+
+// --- Phase 8: Entities ---
+
+export type EntityType = "branch" | "workplace" | "room" | "doctor" | "activity";
+
+export type Entity = {
+  id: string;
+  organization_id: string;
+  type: EntityType;
+  code: string;
+  name: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Workplace
+  workplace_address: string | null;
+  // Room
+  room_workplace_id: string | null;
+  // Activity
+  activity_branch_id: string | null;
+  activity_avg_selling_price: number | null;
+  activity_duration_minutes: number | null;
+  activity_avg_cost_lab: number | null;
+  activity_avg_cost_staff: number | null;
+  activity_avg_cost_materials: number | null;
+};
+
+export type EntityDoctorBranch = {
+  doctor_id: string;
+  branch_id: string;
+};
+
+export type EntityDoctorWorkplace = {
+  doctor_id: string;
+  workplace_id: string;
+};
+
+export type EntityActivityWorkplace = {
+  activity_id: string;
+  workplace_id: string;
+};
+
+export type EntityRelated = {
+  id: string;
+  name: string;
+  code: string;
+};
+
+export type EntityWithRelations = Entity & {
+  room_workplace?: EntityRelated | null;
+  activity_branch?: EntityRelated | null;
+  entity_doctor_branches?: { branch_id: string; entities: EntityRelated }[];
+  entity_doctor_workplaces?: { workplace_id: string; entities: EntityRelated }[];
+  entity_activity_workplaces?: { workplace_id: string; entities: EntityRelated }[];
+};
+
+// --- Phase 9: Electronic Invoices ---
+
+export type InvoiceDirection = "issued" | "received";
+export type InvoiceDocumentType = "invoice" | "credit_note" | "debit_note";
+export type ReconciliationStatus = "unmatched" | "suggested" | "confirmed" | "excluded";
+export type SubjectReconciliationStatus = "unmatched" | "confirmed" | "created";
+
+export type SdiAccount = {
+  id: string;
+  organization_id: string;
+  name: string;
+  code: string;
+  pec: string | null;
+  fiscal_code: string;
+  is_active: boolean;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Invoice = {
+  id: string;
+  organization_id: string;
+  sdi_account_id: string;
+  direction: InvoiceDirection;
+  document_type: InvoiceDocumentType;
+  sdi_id: string | null;
+  sdi_status: string | null;
+  number: string;
+  date: string;
+  currency: string;
+  total_taxable: number;
+  total_vat: number;
+  total_amount: number;
+  counterpart_name: string;
+  counterpart_fiscal_code: string | null;
+  counterpart_vat: string | null;
+  counterpart_address: string | null;
+  payment_method: string | null;
+  subject_id: string | null;
+  subject_reconciliation_status: SubjectReconciliationStatus;
+  xml_content: string;
+  xml_hash: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type InvoiceLine = {
+  id: string;
+  invoice_id: string;
+  line_number: number;
+  description: string | null;
+  quantity: number | null;
+  unit_price: number | null;
+  total_price: number;
+  vat_rate: number | null;
+  vat_nature: string | null;
+  suggested_activity_id: string | null;
+  confirmed_activity_id: string | null;
+  activity_reconciliation_status: ReconciliationStatus;
+};
+
+export type InvoicePaymentSchedule = {
+  id: string;
+  invoice_id: string;
+  due_date: string;
+  amount: number;
+  paid_date: string | null;
+  paid_amount: number | null;
+  suggested_transaction_id: string | null;
+  confirmed_transaction_id: string | null;
+  transaction_reconciliation_status: ReconciliationStatus;
+};
+
+export type InvoiceWithDetails = Invoice & {
+  invoice_lines: InvoiceLine[];
+  invoice_payment_schedule: InvoicePaymentSchedule[];
+  subjects: {
+    id: string;
+    first_name: string | null;
+    last_name: string | null;
+    business_name: string | null;
+    type: SubjectType;
+  } | null;
+  sdi_accounts: {
+    id: string;
+    name: string;
+    code: string;
+  } | null;
 };

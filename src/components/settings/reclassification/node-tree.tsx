@@ -32,6 +32,7 @@ interface NodeTreeProps {
   onAddChild: (parentId: string | null) => void;
   isAccountant: boolean;
   isNonBaseSchema?: boolean;
+  searchQuery?: string;
 }
 
 function parseDropId(id: string): { zone: "before" | "inside"; nodeId: string } | null {
@@ -54,6 +55,7 @@ export function NodeTree({
   onAddChild,
   isAccountant,
   isNonBaseSchema = false,
+  searchQuery = "",
 }: NodeTreeProps) {
   const { t } = useTranslation();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -64,6 +66,36 @@ export function NodeTree({
   );
 
   const flatNodes = flattenTreeWithDepth(tree, expandedIds);
+
+  // Search filtering: show matching nodes + their ancestors
+  const q = searchQuery.trim().toLowerCase();
+  const matchingIds = q
+    ? new Set(
+        allNodes
+          .filter((n) => n.name.toLowerCase().includes(q) || n.full_code.toLowerCase().includes(q) || n.code.toLowerCase().includes(q))
+          .map((n) => n.id)
+      )
+    : null;
+
+  // Collect ancestor ids for matching nodes so they stay visible
+  const visibleIds = matchingIds
+    ? (() => {
+        const ids = new Set(matchingIds);
+        const nodeMap = new Map(allNodes.map((n) => [n.id, n]));
+        for (const id of matchingIds) {
+          let current = nodeMap.get(id);
+          while (current?.parent_id) {
+            ids.add(current.parent_id);
+            current = nodeMap.get(current.parent_id);
+          }
+        }
+        return ids;
+      })()
+    : null;
+
+  const filteredFlatNodes = visibleIds
+    ? flatNodes.filter((n) => visibleIds.has(n.id))
+    : flatNodes;
 
   const childrenMap = new Map<string, boolean>();
   for (const node of allNodes) {
@@ -189,13 +221,14 @@ export function NodeTree({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        {flatNodes.map((node) => (
+        {filteredFlatNodes.map((node) => (
           <NodeTreeItem
             key={node.id}
             node={node}
             hasChildren={childrenMap.has(node.id)}
             isExpanded={expandedIds.has(node.id)}
             isSelected={selectedNodeId === node.id}
+            isSearchMatch={matchingIds !== null && matchingIds.has(node.id)}
             isAccountant={isAccountant}
             showDropBefore={!!isValidDrop && dropInfo!.zone === "before" && dropInfo!.nodeId === node.id}
             showDropInside={!!isValidDrop && dropInfo!.zone === "inside" && dropInfo!.nodeId === node.id}

@@ -63,7 +63,11 @@
       "Bash(node -e \"const pdf = require\\(''pdf-parse''\\); console.log\\(typeof pdf\\)\")",
       "Bash(node -e \"const pdf = require\\(''pdf-parse''\\); console.log\\(Object.keys\\(pdf\\)\\)\")",
       "Bash(node -e \":*)",
-      "Bash(find C:/Repo/Numbers/node_modules/mupdf -name *.wasm)"
+      "Bash(find C:/Repo/Numbers/node_modules/mupdf -name *.wasm)",
+      "Bash(find /c/Repo/Numbers -name *reclassification* -type f)",
+      "Bash(ls -la '/c/Repo/Numbers/src/app/\\(protected\\)/transactions/')",
+      "Bash(grep -n \"user_manager\" src/app/\\\\\\(protected\\\\\\)/settings/reclassification/[id]/page.tsx)",
+      "Bash(curl -s http://localhost:3001/settings)"
     ]
   }
 }
