@@ -223,10 +223,10 @@ export function CollectionResourcesSection({ orgId }: Props) {
           {resources.map((res) => (
             <div
               key={res.id}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${!res.is_active ? "opacity-50" : ""}`}
+              className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 border-l-emerald-500 px-4 py-3 ${!res.is_active ? "opacity-50" : ""}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded shrink-0">{res.code}</span>
+                <span className="font-mono font-bold text-sm bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded shrink-0">{res.code}</span>
                 <div className="min-w-0">
                   <span className="font-medium text-sm block truncate">{res.name}</span>
                   <span className="text-xs text-muted-foreground flex items-center gap-2">
@@ -291,9 +291,7 @@ export function CollectionResourcesSection({ orgId }: Props) {
               }}>
                 <SelectTrigger className="!w-full">
                   <SelectValue placeholder={t("settings.collectionResources.selectType")}>
-                    {TYPE_OPTIONS.find((o) => o.value === formType)
-                      ? t(TYPE_OPTIONS.find((o) => o.value === formType)!.labelKey)
-                      : null}
+                    {(() => { const opt = TYPE_OPTIONS.find((o) => o.value === formType); return opt ? t(opt.labelKey) : null; })()}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

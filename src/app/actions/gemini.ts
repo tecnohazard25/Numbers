@@ -234,14 +234,18 @@ REGOLE OBBLIGATORIE:
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return { success: true, full_code: null, confident: false };
 
-    const parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
-    return {
-      success: true,
-      full_code: parsed.full_code ?? null,
-      confident: parsed.confident ?? false,
-    };
-  } catch (e) {
-    return { success: false, error: `Errore nella comunicazione con Gemini. Verifica la connessione e riprova.` };
+    try {
+      const parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+      return {
+        success: true,
+        full_code: parsed.full_code ?? null,
+        confident: parsed.confident ?? false,
+      };
+    } catch {
+      return { success: true, full_code: null, confident: false };
+    }
+  } catch {
+    return { success: false, error: "Errore nella comunicazione con Gemini. Verifica la connessione e riprova." };
   }
 }
 
@@ -300,17 +304,20 @@ Rispondi SOLO con un JSON array, un elemento per movimento:
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return { success: true, results: {} };
 
-    const parsed: Array<{ id: string; full_code: string | null; confident: boolean }> = JSON.parse(
-      text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim()
-    );
+    let parsed: Array<{ id: string; full_code: string | null; confident: boolean }>;
+    try {
+      parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+    } catch {
+      return { success: true, results: {} };
+    }
 
     const results: Record<string, { full_code: string | null; confident: boolean }> = {};
     for (const item of parsed) {
       if (item.id) results[item.id] = { full_code: item.full_code ?? null, confident: item.confident ?? false };
     }
     return { success: true, results };
-  } catch (e) {
-    return { success: false, error: `Errore nella comunicazione con Gemini. Verifica la connessione e riprova.` };
+  } catch {
+    return { success: false, error: "Errore nella comunicazione con Gemini. Verifica la connessione e riprova." };
   }
 }
 
@@ -371,9 +378,12 @@ Rispondi SOLO con un JSON array:
     const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
     if (!text) return { success: true, results: {} };
 
-    const parsed: Array<{ id: string; subject_id: string | null; confident: boolean }> = JSON.parse(
-      text.replace(/\`\`\`json\n?/g, "").replace(/\`\`\`\n?/g, "").trim()
-    );
+    let parsed: Array<{ id: string; subject_id: string | null; confident: boolean }>;
+    try {
+      parsed = JSON.parse(text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
+    } catch {
+      return { success: true, results: {} };
+    }
 
     const results: Record<string, { subject_id: string | null; confident: boolean }> = {};
     for (const item of parsed) {

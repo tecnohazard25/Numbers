@@ -124,10 +124,12 @@ export async function deleteTemplateAction(templateId: string) {
     .eq("id", templateId)
     .single();
 
-  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+  if (!existing) return { error: "Template non trovato" };
+  if (existing.is_template) return { error: "Il template predefinito non può essere eliminato" };
+  // Superadmin can delete any org template; accountant only their own
+  if (!isSuperadmin(currentUser.roles) && existing.organization_id !== currentUser.profile.organization_id) {
     return { error: "Template non trovato" };
   }
-  if (existing.is_template) return { error: "Il template predefinito non può essere eliminato" }; // system template never deletable
 
   const { error } = await admin
     .from("reclassification_templates")
@@ -449,26 +451,20 @@ export async function createNodeAction(data: NodeInput) {
   }
 
   // Auto-compute order_index as max + 1 among siblings
-  const { data: siblings } = await admin
+  let maxOrder = -1;
+  let siblingQuery = admin
     .from("reclassification_nodes")
     .select("order_index")
-    .eq("template_id", data.templateId)
-    .is("parent_id", data.parentId ?? null);
+    .eq("template_id", data.templateId);
 
-  // Filter for correct parent_id match when not null
-  let maxOrder = -1;
   if (data.parentId) {
-    const { data: siblingsByParent } = await admin
-      .from("reclassification_nodes")
-      .select("order_index")
-      .eq("template_id", data.templateId)
-      .eq("parent_id", data.parentId);
-    if (siblingsByParent) {
-      for (const s of siblingsByParent) {
-        if (s.order_index > maxOrder) maxOrder = s.order_index;
-      }
-    }
-  } else if (siblings) {
+    siblingQuery = siblingQuery.eq("parent_id", data.parentId);
+  } else {
+    siblingQuery = siblingQuery.is("parent_id", null);
+  }
+
+  const { data: siblings } = await siblingQuery;
+  if (siblings) {
     for (const s of siblings) {
       if (s.order_index > maxOrder) maxOrder = s.order_index;
     }
@@ -673,10 +669,8 @@ export async function reorderNodesAction(orderedNodeIds: string[]) {
   }
   if (tmplData.is_locked) return { error: LOCKED_ERROR };
 
-  // Bulk update order_index — use the validated node IDs only
-  const validIds = new Set(allNodes.map((n) => n.id));
+  // Bulk update order_index
   for (let i = 0; i < orderedNodeIds.length; i++) {
-    if (!validIds.has(orderedNodeIds[i])) continue;
     await admin
       .from("reclassification_nodes")
       .update({ order_index: i })

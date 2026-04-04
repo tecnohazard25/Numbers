@@ -222,12 +222,14 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
       return;
     }
 
+    const controller = new AbortController();
+
     const timer = setTimeout(async () => {
       try {
-        const userRes = await fetch("/api/user-info");
+        const userRes = await fetch("/api/user-info", { signal: controller.signal });
         const userData = await userRes.json();
         const orgId = userData.profile?.organization_id;
-        if (!orgId) return;
+        if (!orgId || controller.signal.aborted) return;
 
         const params = new URLSearchParams({ orgId });
         if (hasTaxCode) params.set("taxCode", taxCode);
@@ -241,16 +243,22 @@ export function SubjectForm({ initialData, tags: initialTags, isDialog, onSucces
         }
         if (initialData?.id) params.set("excludeId", initialData.id);
 
-        const res = await fetch(`/api/subjects/check-duplicates?${params}`);
+        const res = await fetch(`/api/subjects/check-duplicates?${params}`, { signal: controller.signal });
         const data = await res.json();
-        setDuplicates(data.duplicates ?? []);
-        setSimilarSubjects(data.similar ?? []);
-      } catch {
-        // ignore
+        if (!controller.signal.aborted) {
+          setDuplicates(data.duplicates ?? []);
+          setSimilarSubjects(data.similar ?? []);
+        }
+      } catch (e) {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        // ignore other errors
       }
     }, 600);
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [taxCode, vatNumber, firstName, lastName, businessName, type, initialData?.id]);
 
   // Google Places

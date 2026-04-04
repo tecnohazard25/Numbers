@@ -1,7 +1,6 @@
 import XLSX from "xlsx-js-style";
 import type { ReclassificationNode, ReclassificationNodeRef } from "@/types/supabase";
-import { buildTree, type FlatNode, flattenTreeWithDepth } from "./reclassification-utils";
-import type { ReclassificationNodeWithChildren } from "@/types/supabase";
+import { buildTree, flattenTreeWithDepth } from "./reclassification-utils";
 
 // ─── Excel Export ───
 

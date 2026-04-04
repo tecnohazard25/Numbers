@@ -342,7 +342,8 @@ export async function confirmEntitiesImportAction(data: {
   const admin = createAdminClient();
   let inserted = 0;
   let updated = 0;
-  const unresolvedFks: string[] = [];
+  let failed = 0;
+  const errors: string[] = [];
 
   for (const entity of data.entities) {
     const row: Record<string, unknown> = {
@@ -378,6 +379,8 @@ export async function confirmEntitiesImportAction(data: {
 
       if (error) {
         console.error(`Error inserting entity ${entity.code}:`, error);
+        failed++;
+        errors.push(`${entity.code}: ${error.message}`);
         continue;
       }
       inserted++;
@@ -414,6 +417,8 @@ export async function confirmEntitiesImportAction(data: {
 
       if (error) {
         console.error(`Error updating entity ${entity.code}:`, error);
+        failed++;
+        errors.push(`${entity.code}: ${error.message}`);
         continue;
       }
       updated++;
@@ -453,8 +458,8 @@ export async function confirmEntitiesImportAction(data: {
     report: {
       inserted,
       updated,
-      skipped: data.entities.length - inserted - updated,
-      unresolvedFks,
+      skipped: data.entities.length - inserted - updated - failed,
+      unresolvedFks: errors,
     },
   };
 }

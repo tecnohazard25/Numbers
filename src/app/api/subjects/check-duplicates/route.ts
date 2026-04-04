@@ -1,15 +1,29 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return NextResponse.json({ duplicates: [], similar: [] }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const orgId = searchParams.get("orgId");
+
+  // Verify user belongs to the requested organization
+  if (orgId && currentUser.profile.organization_id !== orgId) {
+    return NextResponse.json({ duplicates: [], similar: [] }, { status: 403 });
+  }
   const taxCode = searchParams.get("taxCode");
   const vatNumber = searchParams.get("vatNumber");
   const firstName = searchParams.get("firstName");
   const lastName = searchParams.get("lastName");
   const businessName = searchParams.get("businessName");
   const excludeId = searchParams.get("excludeId");
+
+  // Escape PostgreSQL ilike wildcards
+  const escapeIlike = (s: string) => s.replace(/[%_\\]/g, "\\$&");
 
   if (!orgId) {
     return NextResponse.json({ duplicates: [], similar: [] });
@@ -65,8 +79,8 @@ export async function GET(request: Request) {
       .select("id, first_name, last_name, tax_code, vat_number, type")
       .eq("organization_id", orgId)
       .eq("type", "person")
-      .ilike("first_name", firstName)
-      .ilike("last_name", lastName);
+      .ilike("first_name", escapeIlike(firstName))
+      .ilike("last_name", escapeIlike(lastName));
     if (excludeId) query = query.neq("id", excludeId);
     const { data } = await query;
     if (data?.length) {
@@ -89,7 +103,7 @@ export async function GET(request: Request) {
       .select("id, business_name, tax_code, vat_number, type")
       .eq("organization_id", orgId)
       .neq("type", "person")
-      .ilike("business_name", businessName);
+      .ilike("business_name", escapeIlike(businessName));
     if (excludeId) query = query.neq("id", excludeId);
     const { data } = await query;
     if (data?.length) {

@@ -152,10 +152,10 @@ export function SdiAccountsSection({ orgId }: Props) {
           {accounts.map((acc) => (
             <div
               key={acc.id}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${!acc.is_active ? "opacity-50" : ""}`}
+              className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 border-l-cyan-500 px-4 py-3 ${!acc.is_active ? "opacity-50" : ""}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded shrink-0">{acc.code}</span>
+                <span className="font-mono font-bold text-sm bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 px-2 py-0.5 rounded shrink-0">{acc.code}</span>
                 <div className="min-w-0">
                   <span className="font-medium text-sm block truncate">{acc.name}</span>
                   <span className="text-xs text-muted-foreground flex items-center gap-2">

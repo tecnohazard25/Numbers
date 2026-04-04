@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,13 +59,21 @@ function toSnakeCase(str: string): string {
     .replace(/^_|_$/g, "");
 }
 
-const ENTITY_TABS: { key: EntityType; icon: typeof Building2; labelKey: string }[] = [
-  { key: "branch", icon: Building2, labelKey: "settings.entities.branch" },
-  { key: "workplace", icon: MapPin, labelKey: "settings.entities.workplace" },
-  { key: "room", icon: DoorOpen, labelKey: "settings.entities.room" },
-  { key: "doctor", icon: Stethoscope, labelKey: "settings.entities.doctor" },
-  { key: "activity", icon: Activity, labelKey: "settings.entities.activity" },
+const ENTITY_TABS: { key: EntityType; icon: typeof Building2; labelKey: string; color: string }[] = [
+  { key: "branch", icon: Building2, labelKey: "settings.entities.branch", color: "text-violet-500" },
+  { key: "workplace", icon: MapPin, labelKey: "settings.entities.workplace", color: "text-blue-500" },
+  { key: "room", icon: DoorOpen, labelKey: "settings.entities.room", color: "text-teal-500" },
+  { key: "doctor", icon: Stethoscope, labelKey: "settings.entities.doctor", color: "text-emerald-500" },
+  { key: "activity", icon: Activity, labelKey: "settings.entities.activity", color: "text-amber-500" },
 ];
+
+const TYPE_COLORS: Record<EntityType, { border: string; codeBg: string; codeText: string }> = {
+  branch: { border: "border-l-violet-500", codeBg: "bg-violet-500/15", codeText: "text-violet-700 dark:text-violet-300" },
+  workplace: { border: "border-l-blue-500", codeBg: "bg-blue-500/15", codeText: "text-blue-700 dark:text-blue-300" },
+  room: { border: "border-l-teal-500", codeBg: "bg-teal-500/15", codeText: "text-teal-700 dark:text-teal-300" },
+  doctor: { border: "border-l-emerald-500", codeBg: "bg-emerald-500/15", codeText: "text-emerald-700 dark:text-emerald-300" },
+  activity: { border: "border-l-amber-500", codeBg: "bg-amber-500/15", codeText: "text-amber-700 dark:text-amber-300" },
+};
 
 const NEW_TITLE_KEYS: Record<EntityType, string> = {
   branch: "settings.entities.newBranch",
@@ -82,6 +90,12 @@ const EDIT_TITLE_KEYS: Record<EntityType, string> = {
   doctor: "settings.entities.editDoctor",
   activity: "settings.entities.editActivity",
 };
+
+/** Build a type-specific i18n key like "settings.entities.createdBranch" */
+function typeKey(prefix: string, type: EntityType): string {
+  const capitalized = type.charAt(0).toUpperCase() + type.slice(1);
+  return `settings.entities.${prefix}${capitalized}`;
+}
 
 interface Props {
   orgId: string;
@@ -124,13 +138,26 @@ export function EntitiesSection({ orgId }: Props) {
   // Import state
   const [importOpen, setImportOpen] = useState(false);
 
+  // Abort controller to cancel in-flight requests when switching tabs
+  const abortRef = useRef<AbortController | null>(null);
+
   const loadData = useCallback(async () => {
-    const params = new URLSearchParams({ orgId, type: activeType });
-    if (showInactive) params.set("includeInactive", "true");
-    const res = await fetch(`/api/entities?${params}`);
-    const data = await res.json();
-    setEntities(data.entities ?? []);
-    setLoading(false);
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    try {
+      const params = new URLSearchParams({ orgId, type: activeType });
+      if (showInactive) params.set("includeInactive", "true");
+      const res = await fetch(`/api/entities?${params}`, { signal: controller.signal });
+      const data = await res.json();
+      if (!controller.signal.aborted) {
+        setEntities(data.entities ?? []);
+        setLoading(false);
+      }
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      throw e;
+    }
   }, [orgId, activeType, showInactive]);
 
   const loadLookups = useCallback(async () => {
@@ -146,6 +173,11 @@ export function EntitiesSection({ orgId }: Props) {
 
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => { loadLookups(); }, [loadLookups]);
+
+  // Reset showInactive when switching entity type
+  useEffect(() => {
+    setShowInactive(false);
+  }, [activeType]);
 
   useEffect(() => {
     if (activeType === "room" || activeType === "doctor" || activeType === "activity") {
@@ -225,11 +257,11 @@ export function EntitiesSection({ orgId }: Props) {
     if (editing) {
       const result = await updateEntityAction(editing.id, inputData);
       if (result.error) { toast.error(result.error); }
-      else { toast.success(t("settings.entities.updated")); setFormOpen(false); loadData(); loadLookups(); }
+      else { toast.success(t(typeKey("updated", activeType))); setFormOpen(false); await loadData(); await loadLookups(); }
     } else {
       const result = await createEntityAction(inputData);
       if (result.error) { toast.error(result.error); }
-      else { toast.success(t("settings.entities.created")); setFormOpen(false); loadData(); loadLookups(); }
+      else { toast.success(t(typeKey("created", activeType))); setFormOpen(false); await loadData(); await loadLookups(); }
     }
     setIsSubmitting(false);
   }
@@ -240,8 +272,8 @@ export function EntitiesSection({ orgId }: Props) {
     const result = await deleteEntityAction(deleteTarget.id);
     if (result.error) { toast.error(result.error); }
     else {
-      toast.success(result.softDeleted ? t("settings.entities.deactivatedMsg") : t("settings.entities.deleted"));
-      setDeleteTarget(null); loadData(); loadLookups();
+      toast.success(result.softDeleted ? t(typeKey("deactivated", activeType)) : t(typeKey("deleted", activeType)));
+      setDeleteTarget(null); await loadData(); await loadLookups();
     }
     setIsSubmitting(false);
   }
@@ -250,7 +282,7 @@ export function EntitiesSection({ orgId }: Props) {
     setIsSubmitting(true);
     const result = await toggleEntityActiveAction(entity.id);
     if (result.error) { toast.error(result.error); }
-    else { toast.success(result.is_active ? t("settings.entities.reactivated") : t("settings.entities.deactivatedMsg")); loadData(); }
+    else { toast.success(result.is_active ? t(typeKey("reactivated", activeType)) : t(typeKey("deactivated", activeType))); await loadData(); }
     setIsSubmitting(false);
   }
 
@@ -263,24 +295,31 @@ export function EntitiesSection({ orgId }: Props) {
 
   /** Render the detail line below entity name, type-specific */
   function renderEntityDetail(entity: EntityWithRelations) {
-    const parts: string[] = [];
-
     if (activeType === "workplace" && entity.workplace_address) {
-      parts.push(entity.workplace_address);
+      return <span className="text-xs text-muted-foreground">{entity.workplace_address}</span>;
     }
     if (activeType === "room" && entity.room_workplace) {
-      parts.push(`${t("settings.entities.workplaceSede")}: ${entity.room_workplace.name}`);
+      return <span className="text-xs text-muted-foreground">{t("settings.entities.workplaceSede")}: {entity.room_workplace.name}</span>;
     }
     if (activeType === "activity") {
-      if (entity.activity_branch) parts.push(entity.activity_branch.name);
-      if (entity.activity_duration_minutes) parts.push(`${entity.activity_duration_minutes} ${t("settings.entities.min")}`);
-      if (entity.activity_avg_selling_price != null) parts.push(`€ ${Number(entity.activity_avg_selling_price).toFixed(2)}`);
+      const parts: React.ReactNode[] = [];
+      if (entity.activity_branch) {
+        parts.push(<span key="branch" className="text-violet-600 dark:text-violet-400">{entity.activity_branch.name}</span>);
+      }
+      if (entity.activity_duration_minutes) {
+        parts.push(<span key="dur">{entity.activity_duration_minutes} {t("settings.entities.min")}</span>);
+      }
+      if (entity.activity_avg_selling_price != null) {
+        parts.push(<span key="price" className="text-emerald-600 dark:text-emerald-400 font-medium">€ {Number(entity.activity_avg_selling_price).toFixed(2)}</span>);
+      }
+      if (parts.length > 0) {
+        return <span className="text-xs text-muted-foreground flex items-center gap-1.5">{parts.map((p, i) => <span key={i} className="contents">{i > 0 && <span className="opacity-40">·</span>}{p}</span>)}</span>;
+      }
     }
-    if (!entity.is_active) parts.push(t("common.inactive"));
-
-    return parts.length > 0 ? (
-      <span className="text-xs text-muted-foreground">{parts.join(" — ")}</span>
-    ) : null;
+    if (!entity.is_active) {
+      return <span className="text-xs text-muted-foreground">{t("common.inactive")}</span>;
+    }
+    return null;
   }
 
   if (loading) {
@@ -298,10 +337,29 @@ export function EntitiesSection({ orgId }: Props) {
           </h2>
           <p className="text-sm text-muted-foreground">{t("settings.entities.description")}</p>
         </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showInactive ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowInactive(!showInactive)}
+            title={showInactive ? t("settings.entities.hideInactive") : t("settings.entities.showInactive")}
+            className="cursor-pointer"
+          >
+            {showInactive ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+            {t("settings.paymentTypes.deactivated")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="cursor-pointer">
+            <Upload className="h-4 w-4 mr-1" />
+            {t("settings.entities.import.importButton")}
+          </Button>
+          <Button size="sm" onClick={openCreate} className="cursor-pointer">
+            {t(NEW_TITLE_KEYS[activeType])}
+          </Button>
+        </div>
       </div>
 
       {/* Sub-tab navigation */}
-      <div className="flex gap-1 border-b mb-4">
+      <div className="flex gap-1 border-b mb-4 overflow-x-auto scrollbar-none">
         {ENTITY_TABS.map((tab) => {
           const Icon = tab.icon;
           const active = activeType === tab.key;
@@ -309,69 +367,49 @@ export function EntitiesSection({ orgId }: Props) {
             <button
               key={tab.key}
               type="button"
-              className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer ${
+              className={`flex items-center gap-2 px-3 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 active
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
               }`}
               onClick={() => setActiveType(tab.key)}
             >
-              <Icon className="h-4 w-4" />
-              {t(tab.labelKey)}
+              <Icon className={`h-4 w-4 shrink-0 ${active ? tab.color : ""}`} />
+              <span className="hidden sm:inline">{t(tab.labelKey)}</span>
             </button>
           );
         })}
       </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <Button
-            variant={showInactive ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setShowInactive(!showInactive)}
-            className="cursor-pointer"
-          >
-            {showInactive ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-            {showInactive ? t("settings.entities.hideInactive") : t("settings.entities.showInactive")}
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)} className="cursor-pointer">
-            <Upload className="h-4 w-4 mr-1" />
-            {t("settings.entities.import.importButton")}
-          </Button>
-        </div>
-        <Button size="sm" onClick={openCreate} className="cursor-pointer">
-          {t(NEW_TITLE_KEYS[activeType])}
-        </Button>
-      </div>
-
       {/* Entity list */}
       {entities.length === 0 ? (
         <div className="text-center py-8">
-          <p className="text-muted-foreground">{t("settings.entities.noEntities")}</p>
+          <p className="text-muted-foreground">{t(typeKey("noItems", activeType))}</p>
         </div>
       ) : (
         <div className="space-y-2">
-          {entities.map((entity) => (
+          {entities.map((entity) => {
+            const colors = TYPE_COLORS[activeType];
+            return (
             <div
               key={entity.id}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${!entity.is_active ? "opacity-50" : ""}`}
+              className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 ${colors.border} px-4 py-3 ${!entity.is_active ? "opacity-50" : ""}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded shrink-0">{entity.code}</span>
+                <span className={`font-mono font-bold text-sm ${colors.codeBg} ${colors.codeText} px-2 py-0.5 rounded shrink-0`}>{entity.code}</span>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm truncate">{entity.name}</span>
                     {/* Badges for doctor branches */}
                     {activeType === "doctor" && entity.entity_doctor_branches?.map((b) => (
-                      <Badge key={b.branch_id} variant="outline" className="text-xs shrink-0">{b.entities?.name}</Badge>
+                      <Badge key={b.branch_id} className="text-xs shrink-0 bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30">{b.entities?.name}</Badge>
                     ))}
                     {/* Badges for doctor/activity workplaces */}
                     {activeType === "doctor" && entity.entity_doctor_workplaces?.map((w) => (
-                      <Badge key={w.workplace_id} variant="secondary" className="text-xs shrink-0">{w.entities?.name}</Badge>
+                      <Badge key={w.workplace_id} className="text-xs shrink-0 bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30">{w.entities?.name}</Badge>
                     ))}
                     {activeType === "activity" && entity.entity_activity_workplaces?.map((w) => (
-                      <Badge key={w.workplace_id} variant="secondary" className="text-xs shrink-0">{w.entities?.name}</Badge>
+                      <Badge key={w.workplace_id} className="text-xs shrink-0 bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30">{w.entities?.name}</Badge>
                     ))}
                   </div>
                   {renderEntityDetail(entity)}
@@ -399,7 +437,8 @@ export function EntitiesSection({ orgId }: Props) {
                 </Button>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

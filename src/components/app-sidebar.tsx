@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/sidebar";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { logoutAction } from "@/app/actions/auth";
 import type { ImpersonationInfo } from "@/components/app-layout";
 import Link from "next/link";
@@ -58,6 +59,7 @@ export function AppSidebar({ roles, userName, organizationName, impersonating }:
     const res = await fetch("/api/impersonate", { method: "DELETE" });
     const data = await res.json();
     if (data.error) {
+      toast.error(data.error);
       setIsRestoring(false);
       return;
     }
@@ -134,29 +136,8 @@ export function AppSidebar({ roles, userName, organizationName, impersonating }:
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        {isOrgAdmin && (
-          <SidebarGroup>
-            <SidebarGroupLabel>{t("sidebar.userManagement")}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {orgAdminItems.map((item) => (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      render={<Link href={item.url} />}
-                      isActive={pathname === item.url}
-                    >
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
         {hasAnagraficaAccess && (
           <SidebarGroup>
-            <SidebarGroupLabel>{t("sidebar.registry")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {anagraficaItems.map((item) => (
@@ -174,11 +155,22 @@ export function AppSidebar({ roles, userName, organizationName, impersonating }:
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        {(roles.includes("accountant") || isSuperadmin) && (
+        {(roles.includes("accountant") || isOrgAdmin || isSuperadmin) && (
           <SidebarGroup>
             <SidebarGroupLabel>{t("sidebar.configuration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
+                {isOrgAdmin && !isSuperadmin && orgAdminItems.map((item) => (
+                  <SidebarMenuItem key={item.url}>
+                    <SidebarMenuButton
+                      render={<Link href={item.url} />}
+                      isActive={pathname === item.url}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
                 {settingsItems.filter((item) => !isSuperadmin || item.url !== "/settings").map((item) => (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton

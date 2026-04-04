@@ -196,10 +196,10 @@ export function PaymentTypesSection({ orgId }: Props) {
           {paymentTypes.map((pt) => (
             <div
               key={pt.id}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${!pt.is_active ? "opacity-50" : ""}`}
+              className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 border-l-indigo-500 px-4 py-3 ${!pt.is_active ? "opacity-50" : ""}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded shrink-0">{pt.code}</span>
+                <span className="font-mono font-bold text-sm bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded shrink-0">{pt.code}</span>
                 <div className="min-w-0">
                   <span className="font-medium text-sm block truncate">{pt.name}</span>
                   {!pt.is_active && (

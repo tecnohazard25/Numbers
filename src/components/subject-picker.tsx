@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, X } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -169,7 +169,14 @@ export function SubjectPicker({
             <span className="text-muted-foreground">{placeholder ?? t("transactions.selectSubject")}</span>
           )}
         </span>
-        <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+        {value ? (
+          <X
+            className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2 hover:text-foreground"
+            onClick={(e) => { e.stopPropagation(); onChange(""); }}
+          />
+        ) : (
+          <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0 ml-2" />
+        )}
       </button>
 
       {open && createPortal(

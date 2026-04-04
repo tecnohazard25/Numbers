@@ -192,10 +192,10 @@ export function VatCodesSection({ orgId }: Props) {
           {vatCodes.map((vc) => (
             <div
               key={vc.id}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${!vc.is_active ? "opacity-50" : ""}`}
+              className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 border-l-rose-500 px-4 py-3 ${!vc.is_active ? "opacity-50" : ""}`}
             >
               <div className="flex items-center gap-3 min-w-0">
-                <span className="font-mono font-bold text-sm bg-muted px-2 py-0.5 rounded shrink-0">{vc.code}</span>
+                <span className="font-mono font-bold text-sm bg-rose-500/15 text-rose-700 dark:text-rose-300 px-2 py-0.5 rounded shrink-0">{vc.code}</span>
                 <div className="min-w-0">
                   <span className="font-medium text-sm block truncate">{vc.description}</span>
                   <span className="text-xs text-muted-foreground">

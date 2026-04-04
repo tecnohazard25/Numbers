@@ -18,6 +18,8 @@ import {
   Download,
   Upload,
   ArrowLeftRight,
+  FileJson,
+  FileSpreadsheet,
   Inbox,
   Pencil,
   Plus,
@@ -39,11 +41,13 @@ ModuleRegistry.registerModules([AllCommunityModule]);
 // --- Import/Export dropdown menu ---
 function ImportExportMenu({
   onExport,
+  onExportJson,
   importItems,
   disabled,
   t,
 }: {
   onExport: () => void;
+  onExportJson?: () => void;
   importItems?: DataGridImportItem[];
   disabled: boolean;
   t: (key: string) => string;
@@ -83,11 +87,20 @@ function ImportExportMenu({
             disabled={disabled}
             onClick={() => { onExport(); setOpen(false); }}
           >
-            <span className="flex items-center justify-center w-5 h-5 rounded bg-green-600 text-white">
-              <Download className="h-3 w-3" />
-            </span>
+            <FileSpreadsheet className="h-4 w-4 text-green-600" />
             Excel
           </button>
+          {onExportJson && (
+            <button
+              type="button"
+              className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left disabled:opacity-50"
+              disabled={disabled}
+              onClick={() => { onExportJson(); setOpen(false); }}
+            >
+              <FileJson className="h-4 w-4 text-amber-600" />
+              JSON
+            </button>
+          )}
           {/* Import section */}
           {importItems && importItems.length > 0 && (
             <>
@@ -925,6 +938,46 @@ export function DataGrid<T>({
     XLSX.writeFile(wb, `${exportFileName}.xlsx`);
   }, [exportFileName, columnDefs, rowData, t, hiddenColumns, groupByColumn, getGroupValue, buildSheet]);
 
+  // --- JSON Export ---
+  const handleExportJson = useCallback(() => {
+    const cols = columnDefs.filter(
+      (c) => c.headerName && c.headerName !== t("common.actions") && !hiddenColumns.has(c.headerName!)
+    );
+
+    // Collect items
+    const allItems: T[] = [];
+    if (gridApiRef.current) {
+      gridApiRef.current.forEachNodeAfterFilterAndSort((node) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        if (node.data && !(node.data as any).__isGroupRow) allItems.push(node.data);
+      });
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      allItems.push(...rowData.filter((r) => !(r as any).__isGroupRow));
+    }
+
+    // Build JSON rows with header names as keys
+    const jsonRows = allItems.map((item) => {
+      const row: Record<string, unknown> = {};
+      for (const col of cols) {
+        const header = col.headerName!;
+        const raw = getExportRaw(item, col);
+        const display = getExportDisplay(item, col);
+        // Use raw value if it's a number/boolean, otherwise display
+        row[header] = typeof raw === "number" || typeof raw === "boolean" ? raw : (display ?? raw ?? "");
+      }
+      return row;
+    });
+
+    const blob = new Blob([JSON.stringify(jsonRows, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${exportFileName}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [columnDefs, rowData, t, hiddenColumns, exportFileName, getExportRaw, getExportDisplay]);
+
   const containerStyle = useMemo(
     () => ({
       width: "100%",
@@ -1245,6 +1298,7 @@ export function DataGrid<T>({
         {/* Import/Export dropdown */}
         <ImportExportMenu
           onExport={handleExport}
+          onExportJson={handleExportJson}
           importItems={importItems}
           disabled={rowData.length === 0}
           t={t}

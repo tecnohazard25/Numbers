@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -97,7 +97,7 @@ export function NodeDetailForm({
       .map((r) => r.ref_node_id);
     setSelectedRefIds(new Set(refs));
     setRefSearch("");
-  }, [node.id, node.code, node.name, node.sign, node.is_total, node.formula, refsKey]);
+  }, [node.id, node.code, node.name, node.description, node.sign, node.is_total, node.formula, refsKey]);
 
   const hasChanges =
     code !== node.code ||

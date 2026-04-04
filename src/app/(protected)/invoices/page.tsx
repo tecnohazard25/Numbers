@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import Link from "next/link";
 import {
   FileText,
   Upload,
@@ -20,6 +21,8 @@ import {
   Trash2,
   Users,
   Loader2,
+  Settings,
+  AlertTriangle,
 } from "lucide-react";
 import { deleteInvoiceAction, reconcileSubjectsAction } from "@/app/actions/invoices";
 import { ImportDialog } from "./_components/import-dialog";
@@ -112,6 +115,7 @@ export default function InvoicesPage() {
 
   // Data
   const [sdiAccounts, setSdiAccounts] = useState<SdiAccount[]>([]);
+  const [sdiLoaded, setSdiLoaded] = useState(false);
   const [invoices, setInvoices] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -150,6 +154,7 @@ export default function InvoicesPage() {
       .then((r) => r.json())
       .then((data) => {
         setSdiAccounts(data.accounts ?? []);
+        setSdiLoaded(true);
         if (data.accounts?.length > 0 && !selectedAccountId) {
           setSelectedAccountId(data.accounts[0].id);
         }
@@ -258,6 +263,28 @@ export default function InvoicesPage() {
   ], [t]);
 
   if (!authorized) return null;
+
+  // No SDI accounts configured — prompt to go to settings
+  if (sdiLoaded && sdiAccounts.length === 0) {
+    return (
+      <div className="flex flex-col flex-1 min-h-0 gap-4">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <FileText className="h-6 w-6" />
+          {t("invoices.title")}
+        </h1>
+        <div className="flex flex-col items-center justify-center py-20 gap-4 text-center">
+          <AlertTriangle className="h-12 w-12 text-yellow-500" />
+          <h2 className="text-lg font-semibold">{t("invoices.noSdiAccounts")}</h2>
+          <Link href="/settings">
+            <Button className="cursor-pointer">
+              <Settings className="h-4 w-4 mr-2" />
+              {t("invoices.goToSettings")}
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-4">
@@ -371,7 +398,7 @@ export default function InvoicesPage() {
 
       {!selectedAccountId ? (
         <div className="text-center py-12 text-muted-foreground">
-          {sdiAccounts.length === 0 ? t("invoices.noSdiAccounts") : t("invoices.selectSdiAccountFirst")}
+          {t("invoices.selectSdiAccountFirst")}
         </div>
       ) : (
         <DataGrid

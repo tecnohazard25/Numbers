@@ -25,9 +25,17 @@ export interface ImportedSchema {
 
 /** Parse a JSON schema file */
 export function parseJsonImport(content: string): ImportedSchema {
-  const data = JSON.parse(content);
+  let data;
+  try {
+    data = JSON.parse(content);
+  } catch (e) {
+    throw new Error("File JSON non valido o corrotto");
+  }
   if (!data.nodes || !Array.isArray(data.nodes)) {
     throw new Error("Formato JSON non valido: manca l'array 'nodes'");
+  }
+  if (data.nodes.length === 0) {
+    throw new Error("Il file JSON non contiene nodi");
   }
   return {
     name: data.name ?? "Importato",
@@ -51,12 +59,23 @@ export function parseJsonImport(content: string): ImportedSchema {
 
 /** Parse an Excel schema file */
 export function parseExcelImport(buffer: ArrayBuffer): ImportedSchema {
-  const wb = XLSX.read(buffer, { type: "array" });
+  let wb;
+  try {
+    wb = XLSX.read(buffer, { type: "array" });
+  } catch (e) {
+    throw new Error("File Excel non valido o corrotto");
+  }
+
   const ws = wb.Sheets[wb.SheetNames[0]];
   if (!ws) throw new Error("Nessun foglio trovato nel file Excel");
 
-  const rows: string[][] = XLSX.utils.sheet_to_json(ws, { header: 1 });
-  if (rows.length < 2) throw new Error("Il file Excel è vuoto");
+  let rows: string[][];
+  try {
+    rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+  } catch (e) {
+    throw new Error("Errore nella lettura del foglio Excel");
+  }
+  if (rows.length < 2) throw new Error("Il file Excel è vuoto o contiene solo l'intestazione");
 
   // Skip header row
   const dataRows = rows.slice(1).filter((r) => r.some((c) => c));

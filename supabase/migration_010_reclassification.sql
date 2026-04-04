@@ -350,7 +350,7 @@ DECLARE
   id_i1 uuid; id_i2 uuid; id_i3 uuid;
 BEGIN
   INSERT INTO reclassification_templates (name, description, is_template, is_active, is_base)
-  VALUES ('Riclassificato standard', 'Schema di riclassificazione predefinito per centri medici e poliambulatori', true, true, true)
+  VALUES ('Schema base', 'Piano dei conti semplificato per centri medici e poliambulatori', true, true, true)
   RETURNING id INTO tmpl_id;
 
   -- ── A: Ricavi delle Prestazioni Sanitarie ──

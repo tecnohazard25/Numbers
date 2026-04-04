@@ -15,7 +15,7 @@ import {
   Upload,
   Lock,
   Unlock,
-  MoreHorizontal,
+  Loader2,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
@@ -224,7 +224,16 @@ export default function ReclassificationPage() {
     : templates.filter((t) => !t.is_template);
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 gap-6">
+    <div className="flex flex-col flex-1 min-h-0 gap-6 relative">
+      {/* Loading overlay */}
+      {isSubmitting && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/80 rounded-lg">
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span className="text-sm">{t("common.loading")}</span>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <FileSpreadsheet className="h-6 w-6" />

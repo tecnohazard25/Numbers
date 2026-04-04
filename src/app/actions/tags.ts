@@ -8,6 +8,15 @@ export async function createTagAction(name: string, color: string) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return { error: "Non autorizzato" };
 
+  const { roles } = currentUser;
+  const isOrgAdmin = roles.includes("user_manager");
+  const isSuperadmin = roles.includes("superadmin");
+  const isAccountant = roles.includes("accountant");
+
+  if (!isSuperadmin && !isOrgAdmin && !isAccountant) {
+    return { error: "Non autorizzato" };
+  }
+
   const organizationId = currentUser.profile.organization_id;
   if (!organizationId) return { error: "Organizzazione non trovata" };
 

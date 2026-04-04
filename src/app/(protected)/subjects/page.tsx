@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { DataGrid } from "@/components/data-grid";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -198,11 +198,17 @@ export default function SubjectsPage() {
     setFormDialogOpen(true);
   };
 
+  const editAbortRef = useRef<AbortController | null>(null);
+
   const openEditForm = async (subject: SubjectWithDetails) => {
+    editAbortRef.current?.abort();
+    const controller = new AbortController();
+    editAbortRef.current = controller;
     setFormLoading(true);
     setFormDialogOpen(true);
     try {
-      const res = await fetch(`/api/subjects/${subject.id}`);
+      const res = await fetch(`/api/subjects/${subject.id}`, { signal: controller.signal });
+      if (controller.signal.aborted) return;
       if (res.ok) {
         const data = await res.json();
         setFormSubject(data.subject);
@@ -210,7 +216,8 @@ export default function SubjectsPage() {
         toast.error(t("subjects.subjectNotFound"));
         setFormDialogOpen(false);
       }
-    } catch {
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
       toast.error(t("subjects.loadError"));
       setFormDialogOpen(false);
     } finally {
@@ -225,6 +232,7 @@ export default function SubjectsPage() {
   };
 
   const handleFormClose = () => {
+    editAbortRef.current?.abort();
     setFormDialogOpen(false);
     setFormSubject(null);
   };

@@ -93,6 +93,8 @@ export async function uploadTransactionAttachmentAction(formData: FormData) {
   return { success: true, attachment };
 }
 
+// Note: download is intentionally available to all org users (not just accountant)
+// because viewing attachments is a read-only operation
 export async function getAttachmentSignedUrlAction(attachmentId: string) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return { error: "Non autorizzato" };

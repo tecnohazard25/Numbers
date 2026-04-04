@@ -40,6 +40,8 @@ import { ImportDialog } from "@/components/transactions/import/ImportDialog";
 import { AccountPicker, type AccountNode } from "@/components/account-picker";
 import { TransactionDashboard } from "@/components/transactions/TransactionDashboard";
 import { useTranslation } from "@/lib/i18n/context";
+import { useRouter } from "next/navigation";
+import { AlertTriangle, Settings } from "lucide-react";
 import type {
   CollectionResource,
   TransactionDirection,
@@ -85,6 +87,7 @@ function getSubjectDisplayName(s: TransactionRow["subjects"]): string {
 
 export default function TransactionsPage() {
   const { t, locale } = useTranslation();
+  const router = useRouter();
 
   const [transactions, setTransactions] = useState<TransactionRow[]>([]);
   const [resources, setResources] = useState<CollectionResource[]>([]);
@@ -475,6 +478,27 @@ export default function TransactionsPage() {
     );
   }
 
+  if (!loading && resources.length === 0) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <ArrowLeftRight className="h-6 w-6" />
+          {t("transactions.title")}
+        </h1>
+        <div className="flex flex-col items-center justify-center py-16 gap-4">
+          <AlertTriangle className="h-12 w-12 text-amber-500" />
+          <p className="text-muted-foreground text-center max-w-md">
+            {t("transactions.noResourcesWarning")}
+          </p>
+          <Button onClick={() => router.push("/settings")} className="cursor-pointer">
+            <Settings className="h-4 w-4 mr-2" />
+            {t("transactions.goToSettings")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col flex-1 min-h-0 gap-6">
       {/* Header */}
@@ -773,7 +797,7 @@ export default function TransactionsPage() {
                       }
                       setIsClassifyingBulk(false);
                       if (matched > 0) {
-                        toast.success(`${matched}/${toMatch.length} soggetti associati`);
+                        toast.success(`${matched}/${toMatch.length} clienti/fornitori associati`);
                         loadTransactions();
                       } else {
                         toast.info(t("transactions.noSubjectsMatched"));

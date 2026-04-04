@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, FileSpreadsheet, Plus, ChevronsDownUp, Download, Upload, Lock } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, Plus, ChevronsDownUp, Download, Upload, Lock, FileText, FileJson } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/context";
@@ -417,14 +417,16 @@ export default function TemplateEditorPage() {
         <DropdownMenu>
           <DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
             <Download className="h-4 w-4 mr-1.5" />
-            {t("common.exportExcel")}
+            {t("reclassification.export")}
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem onClick={handleExportExcel}>
-              {t("reclassification.exportExcel")}
+              <FileSpreadsheet className="h-4 w-4 mr-2 text-green-600" />
+              Excel
             </DropdownMenuItem>
             <DropdownMenuItem onClick={handleExportJson}>
-              {t("reclassification.exportJson")}
+              <FileJson className="h-4 w-4 mr-2 text-amber-600" />
+              JSON
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

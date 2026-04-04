@@ -159,7 +159,8 @@ export function TagsSection({ orgId }: Props) {
           {tags.map((tag) => (
             <div
               key={tag.id}
-              className={`flex items-center justify-between gap-3 rounded-lg border px-4 py-3 ${!tag.is_active ? "opacity-50" : ""}`}
+              className={`flex items-center justify-between gap-3 rounded-lg border border-l-4 px-4 py-3 ${!tag.is_active ? "opacity-50" : ""}`}
+              style={{ borderLeftColor: tag.color }}
             >
               <div className="flex items-center gap-3 min-w-0">
                 <span

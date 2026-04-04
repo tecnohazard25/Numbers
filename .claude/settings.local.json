@@ -78,7 +78,15 @@
       "Bash(cat \"/c/Repo/Numbers/src/app/\\(protected\\)/superadmin/organizations/[id]/generate/page.tsx\")",
       "Bash(cat \"/c/Repo/Numbers/src/app/\\(protected\\)/superadmin/page.tsx\")",
       "Bash(cat \"/c/Repo/Numbers/src/app/\\(protected\\)/superadmin/organizations-table.tsx\")",
-      "Bash(node -e \"const p = require\\(''./node_modules/tailwindcss/package.json''\\); console.log\\(p.version\\)\")"
+      "Bash(node -e \"const p = require\\(''./node_modules/tailwindcss/package.json''\\); console.log\\(p.version\\)\")",
+      "Bash(npx vitest:*)",
+      "Bash(grep -F '\"\"newSubject\"\"' src/lib/i18n/locales/it.json)",
+      "Bash(grep -F '\"\"editSubject\"\"' src/lib/i18n/locales/en.json)",
+      "Bash(grep -F '\"\"editSubject\"\"' src/lib/i18n/locales/it.json)",
+      "Bash(grep -F '\"\"subjectType\"\"' src/lib/i18n/locales/en.json)",
+      "Bash(grep -F '\"\"subjectType\"\"' src/lib/i18n/locales/it.json)",
+      "Bash(grep -l \"createTagAction\" src/app/\\\\\\(protected\\\\\\)/settings/_components/*.tsx)",
+      "Bash(ls -la /c/Repo/Numbers/supabase/migration_*.sql)"
     ]
   }
 }

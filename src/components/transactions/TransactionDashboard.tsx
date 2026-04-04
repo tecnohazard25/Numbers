@@ -146,7 +146,7 @@ export function TransactionDashboard({ orgId, collectionResourceId, locale }: Pr
                 <div key={i} className="flex items-center gap-2 text-xs">
                   <div
                     className="h-2 rounded-full shrink-0"
-                    style={{ width: `${Math.max((item.amount / data.topCosts[0].amount) * 100, 8)}%`, backgroundColor: COLORS[i % COLORS.length] }}
+                    style={{ width: `${Math.max(data.topCosts[0].amount ? (item.amount / data.topCosts[0].amount) * 100 : 50, 8)}%`, backgroundColor: COLORS[i % COLORS.length] }}
                   />
                   <span className="truncate flex-1 min-w-0" title={item.name}>{item.name}</span>
                   <span className="text-red-600 dark:text-red-400 shrink-0 font-medium">{fmtCurrency(item.amount)}</span>
@@ -165,7 +165,7 @@ export function TransactionDashboard({ orgId, collectionResourceId, locale }: Pr
                 <div key={i} className="flex items-center gap-2 text-xs">
                   <div
                     className="h-2 rounded-full shrink-0"
-                    style={{ width: `${Math.max((item.amount / data.topRevenues[0].amount) * 100, 8)}%`, backgroundColor: COLORS[i % COLORS.length] }}
+                    style={{ width: `${Math.max(data.topRevenues[0].amount ? (item.amount / data.topRevenues[0].amount) * 100 : 50, 8)}%`, backgroundColor: COLORS[i % COLORS.length] }}
                   />
                   <span className="truncate flex-1 min-w-0" title={item.name}>{item.name}</span>
                   <span className="text-green-600 dark:text-green-400 shrink-0 font-medium">{fmtCurrency(item.amount)}</span>

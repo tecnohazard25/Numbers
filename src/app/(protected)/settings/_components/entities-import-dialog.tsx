@@ -26,6 +26,11 @@ import type { ParsedEntity, ImportPreview, ImportReport } from "@/app/actions/en
 import type { EntityType } from "@/types/supabase";
 import { useTranslation } from "@/lib/i18n/context";
 
+function importKey(suffix: string, type: EntityType): string {
+  const capitalized = type.charAt(0).toUpperCase() + type.slice(1);
+  return `settings.entities.import.${suffix}${capitalized}`;
+}
+
 type Step = "upload" | "processing" | "preview" | "report";
 
 interface Props {
@@ -171,14 +176,14 @@ export function EntitiesImportDialog({ open, onOpenChange, entityType, orgId, on
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{t("settings.entities.import.title")}</DialogTitle>
+          <DialogTitle>{t(importKey("title", entityType))}</DialogTitle>
         </DialogHeader>
 
         {/* Upload Step */}
         {step === "upload" && (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              {t("settings.entities.import.description")}
+              {t(importKey("desc", entityType))}
             </p>
 
             <div

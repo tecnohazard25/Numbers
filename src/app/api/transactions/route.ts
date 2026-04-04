@@ -45,9 +45,13 @@ export async function GET(request: Request) {
 
   const search = searchParams.get("search");
   if (search) {
-    query = query.or(
-      `description.ilike.%${search}%,reference.ilike.%${search}%`
-    );
+    // Sanitize search input to prevent PostgREST injection
+    const safeSearch = search.replace(/[%_(),.]/g, "");
+    if (safeSearch) {
+      query = query.or(
+        `description.ilike.%${safeSearch}%,reference.ilike.%${safeSearch}%`
+      );
+    }
   }
 
   const { data: transactions, error } = await query;
