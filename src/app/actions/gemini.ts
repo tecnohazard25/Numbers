@@ -73,7 +73,7 @@ export async function callGeminiWithText(
 ): Promise<{ success: true; data: GeminiResponse } | { success: false; error: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    return { success: false, error: "GEMINI_API_KEY non configurata" };
+    return { success: false, error: "Chiave API Gemini non configurata. Aggiungi GEMINI_API_KEY nel file .env.local." };
   }
 
   const chartOfAccounts = leafNodes.length > 0
@@ -123,37 +123,43 @@ export async function callGeminiWithText(
       const status = response?.status ?? 0;
       let hint = "";
       if (status === 429) {
-        try {
-          const errJson = JSON.parse(errorBody);
-          const detail = errJson?.error?.message ?? "";
-          hint = ` — ${detail || "quota esaurita, riprova tra qualche minuto"}`;
-        } catch {
-          hint = " — quota esaurita, riprova tra qualche minuto";
-        }
+        return {
+          success: false,
+          error: "Limite di utilizzo Gemini raggiunto. Il piano gratuito consente solo 5 richieste al minuto e 20 al giorno. Per rimuovere i limiti, attiva la fatturazione su Google AI Studio (aistudio.google.com/billing). Riprova tra qualche minuto.",
+        };
       }
       else if (status === 400) {
-        try {
-          const errJson = JSON.parse(errorBody);
-          hint = errJson?.error?.message ? ` — ${errJson.error.message}` : "";
-        } catch {
-          hint = ` — ${errorBody.slice(0, 200)}`;
+        let detail = "";
+        try { detail = JSON.parse(errorBody)?.error?.message ?? ""; } catch { /* */ }
+        if (detail.includes("API key expired")) {
+          return { success: false, error: "La chiave API Gemini è scaduta. Genera una nuova chiave su aistudio.google.com/apikey e aggiornala nel file .env.local (GEMINI_API_KEY)." };
         }
+        if (detail.includes("API key not valid")) {
+          return { success: false, error: "La chiave API Gemini non è valida. Verifica GEMINI_API_KEY nel file .env.local." };
+        }
+        return { success: false, error: `Richiesta non valida (400): ${detail || "verifica la configurazione API Gemini"}` };
       }
-      return { success: false, error: `Errore API Gemini: ${status}${hint}` };
+      else if (status === 403) {
+        return { success: false, error: "Accesso negato dall'API Gemini. Verifica che la chiave API abbia i permessi corretti." };
+      }
+      else if (status === 500 || status === 503) {
+        return { success: false, error: "Il servizio Gemini è temporaneamente non disponibile. Riprova tra qualche minuto." };
+      }
+      return { success: false, error: `Errore imprevisto dall'API Gemini (codice ${status}). Riprova più tardi.` };
     }
 
     const result = await response.json();
     const textResponse = result.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!textResponse) {
-      return { success: false, error: "Risposta Gemini vuota" };
+      return { success: false, error: "Gemini non ha restituito una risposta. Il documento potrebbe essere troppo complesso o vuoto. Riprova." };
     }
 
     const jsonStr = textResponse.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     const parsed: GeminiResponse = JSON.parse(jsonStr);
 
     if (!Array.isArray(parsed.movements)) {
-      return { success: false, error: "Formato risposta non valido" };
+      return { success: false, error: "Gemini ha restituito una risposta in formato non valido. Riprova con un documento diverso." };
     }
 
     // Filter invalid movements
@@ -167,7 +173,7 @@ export async function callGeminiWithText(
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("[Gemini] Exception:", msg);
-    return { success: false, error: `Errore Gemini: ${msg}` };
+    return { success: false, error: `Errore nella comunicazione con Gemini: ${msg}. Verifica la connessione internet e riprova.` };
   }
 }
 
@@ -182,7 +188,7 @@ export async function classifyTransactionAction(
   leafNodes: { full_code: string; name: string; sign: "positive" | "negative" }[]
 ): Promise<{ success: true; full_code: string | null; confident: boolean } | { success: false; error: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { success: false, error: "GEMINI_API_KEY non configurata" };
+  if (!apiKey) return { success: false, error: "Chiave API Gemini non configurata. Aggiungi GEMINI_API_KEY nel file .env.local." };
   if (leafNodes.length === 0) return { success: true, full_code: null, confident: false };
 
   const chart = leafNodes.map((n) => `- ${n.full_code}: ${n.name} [${n.sign === "positive" ? "RICAVO" : "COSTO"}]`).join("\n");
@@ -218,7 +224,10 @@ REGOLE OBBLIGATORIE:
     });
 
     if (!response.ok) {
-      return { success: false, error: `Errore API: ${response.status}` };
+      if (response.status === 429) {
+        return { success: false, error: "Limite di utilizzo Gemini raggiunto. Riprova tra qualche minuto o attiva la fatturazione su aistudio.google.com/billing." };
+      }
+      return { success: false, error: `Errore Gemini (${response.status}). Riprova più tardi.` };
     }
 
     const result = await response.json();
@@ -232,7 +241,7 @@ REGOLE OBBLIGATORIE:
       confident: parsed.confident ?? false,
     };
   } catch (e) {
-    return { success: false, error: `Errore: ${e instanceof Error ? e.message : String(e)}` };
+    return { success: false, error: `Errore nella comunicazione con Gemini. Verifica la connessione e riprova.` };
   }
 }
 
@@ -244,7 +253,7 @@ export async function classifyTransactionsBatchAction(
   leafNodes: { full_code: string; name: string; sign: "positive" | "negative" }[]
 ): Promise<{ success: true; results: Record<string, { full_code: string | null; confident: boolean }> } | { success: false; error: string }> {
   const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) return { success: false, error: "GEMINI_API_KEY non configurata" };
+  if (!apiKey) return { success: false, error: "Chiave API Gemini non configurata. Aggiungi GEMINI_API_KEY nel file .env.local." };
   if (leafNodes.length === 0 || movements.length === 0) return { success: true, results: {} };
 
   const chart = leafNodes.map((n) => `- ${n.full_code}: ${n.name} [${n.sign === "positive" ? "RICAVO" : "COSTO"}]`).join("\n");
@@ -281,10 +290,10 @@ Rispondi SOLO con un JSON array, un elemento per movimento:
     });
 
     if (!response.ok) {
-      const errBody = await response.text();
-      let hint = "";
-      try { hint = ` — ${JSON.parse(errBody)?.error?.message ?? ""}`; } catch { hint = ""; }
-      return { success: false, error: `Errore API: ${response.status}${hint}` };
+      if (response.status === 429) {
+        return { success: false, error: "Limite di utilizzo Gemini raggiunto. Riprova tra qualche minuto o attiva la fatturazione su aistudio.google.com/billing." };
+      }
+      return { success: false, error: `Errore Gemini (${response.status}). Riprova più tardi.` };
     }
 
     const result = await response.json();
@@ -301,6 +310,6 @@ Rispondi SOLO con un JSON array, un elemento per movimento:
     }
     return { success: true, results };
   } catch (e) {
-    return { success: false, error: `Errore: ${e instanceof Error ? e.message : String(e)}` };
+    return { success: false, error: `Errore nella comunicazione con Gemini. Verifica la connessione e riprova.` };
   }
 }
