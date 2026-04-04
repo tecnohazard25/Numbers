@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, Receipt, Tags, Landmark, CreditCard, Building2 } from "lucide-react";
+import { Settings, Receipt, Tags, Landmark, CreditCard, Building2, FileText } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { VatCodesSection } from "./_components/vat-codes-section";
 import { TagsSection } from "./_components/tags-section";
 import { CollectionResourcesSection } from "./_components/collection-resources-section";
 import { PaymentTypesSection } from "./_components/payment-types-section";
 import { EntitiesSection } from "./_components/entities-section";
+import { SdiAccountsSection } from "./_components/sdi-accounts-section";
 
 const TABS = [
   { key: "vat-codes", icon: Receipt, labelKey: "settings.vatCodes.title" },
@@ -16,6 +17,7 @@ const TABS = [
   { key: "collection-resources", icon: Landmark, labelKey: "settings.collectionResources.title" },
   { key: "payment-types", icon: CreditCard, labelKey: "settings.paymentTypes.title" },
   { key: "entities", icon: Building2, labelKey: "settings.entities.title" },
+  { key: "sdi-accounts", icon: FileText, labelKey: "settings.sdiAccounts.title" },
 ] as const;
 
 type TabKey = (typeof TABS)[number]["key"];
@@ -53,7 +55,7 @@ export default function SettingsPage() {
       </h1>
 
       {/* Tab navigation */}
-      <div className="flex gap-1 border-b">
+      <div className="flex gap-1 border-b overflow-x-auto scrollbar-none">
         {TABS.map((tab) => {
           const Icon = tab.icon;
           const active = activeTab === tab.key;
@@ -61,15 +63,15 @@ export default function SettingsPage() {
             <button
               key={tab.key}
               type="button"
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors cursor-pointer whitespace-nowrap shrink-0 ${
                 active
                   ? "border-primary text-primary"
                   : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"
               }`}
               onClick={() => setActiveTab(tab.key)}
             >
-              <Icon className="h-4 w-4" />
-              {t(tab.labelKey)}
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">{t(tab.labelKey)}</span>
             </button>
           );
         })}
@@ -82,6 +84,7 @@ export default function SettingsPage() {
         {activeTab === "collection-resources" && <CollectionResourcesSection orgId={orgId} />}
         {activeTab === "payment-types" && <PaymentTypesSection orgId={orgId} />}
         {activeTab === "entities" && <EntitiesSection orgId={orgId} />}
+        {activeTab === "sdi-accounts" && <SdiAccountsSection orgId={orgId} />}
       </div>
     </div>
   );

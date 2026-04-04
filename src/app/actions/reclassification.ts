@@ -13,6 +13,8 @@ function isSuperadmin(roles: string[]): boolean {
   return roles.includes("superadmin");
 }
 
+const LOCKED_ERROR = "Questo schema è bloccato. Sbloccalo prima di effettuare modifiche.";
+
 /** Check if user can access a template: owns it (same org) or is superadmin for template */
 function canAccessTemplate(
   templateOrgId: string | null,
@@ -136,6 +138,34 @@ export async function deleteTemplateAction(templateId: string) {
 
   revalidatePath("/settings/reclassification");
   return { success: true };
+}
+
+export async function toggleLockTemplateAction(templateId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+  if (!canManageReclassification(currentUser.roles)) return { error: "Non autorizzato" };
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("reclassification_templates")
+    .select("organization_id, is_template, is_locked")
+    .eq("id", templateId)
+    .single();
+
+  if (!existing || !canAccessTemplate(existing.organization_id, existing.is_template, currentUser.profile.organization_id, currentUser.roles)) {
+    return { error: "Schema non trovato" };
+  }
+
+  const { error } = await admin
+    .from("reclassification_templates")
+    .update({ is_locked: !existing.is_locked })
+    .eq("id", templateId);
+
+  if (error) return { error: `Errore: ${error.message}` };
+
+  revalidatePath("/settings/reclassification");
+  return { success: true, is_locked: !existing.is_locked };
 }
 
 export async function setBaseTemplateAction(templateId: string) {
@@ -375,15 +405,29 @@ export async function createNodeAction(data: NodeInput) {
 
   const admin = createAdminClient();
 
-  // Verify template belongs to org and is not system
+  // Verify template belongs to org and is not locked
   const { data: template } = await admin
     .from("reclassification_templates")
-    .select("organization_id, is_template")
+    .select("organization_id, is_template, is_locked")
     .eq("id", data.templateId)
     .single();
 
   if (!template || !canAccessTemplate(template.organization_id, template.is_template, currentUser.profile.organization_id, currentUser.roles)) {
     return { error: "Template non trovato" };
+  }
+  if (template.is_locked) return { error: LOCKED_ERROR };
+
+  // Block adding children to a leaf that has transactions linked
+  if (data.parentId) {
+    const { data: linkedTransactions } = await admin
+      .from("transactions")
+      .select("id")
+      .eq("reclassification_node_id", data.parentId)
+      .limit(1);
+
+    if (linkedTransactions && linkedTransactions.length > 0) {
+      return { error: "Impossibile aggiungere figli a questo nodo: ha dei movimenti collegati. Sposta prima i movimenti su un altro nodo." };
+    }
   }
 
   // Inherit sign from root ancestor for child nodes
@@ -476,7 +520,7 @@ export async function updateNodeAction(nodeId: string, data: NodeUpdateInput) {
   // Verify ownership through template
   const { data: node } = await admin
     .from("reclassification_nodes")
-    .select("template_id, parent_id, reclassification_templates(organization_id, is_template)")
+    .select("template_id, parent_id, reclassification_templates(organization_id, is_template, is_locked)")
     .eq("id", nodeId)
     .single();
 
@@ -485,10 +529,12 @@ export async function updateNodeAction(nodeId: string, data: NodeUpdateInput) {
   const tmpl = node.reclassification_templates as unknown as {
     organization_id: string;
     is_template: boolean;
+    is_locked: boolean;
   };
   if (!canAccessTemplate(tmpl.organization_id, tmpl.is_template, currentUser.profile.organization_id, currentUser.roles)) {
     return { error: "Nodo non trovato" };
   }
+  if (tmpl.is_locked) return { error: LOCKED_ERROR };
 
   const updates: Record<string, unknown> = {};
   if (data.code !== undefined) {
@@ -555,7 +601,7 @@ export async function deleteNodeAction(nodeId: string) {
   // Verify ownership through template
   const { data: node } = await admin
     .from("reclassification_nodes")
-    .select("template_id, reclassification_templates(organization_id, is_template)")
+    .select("template_id, reclassification_templates(organization_id, is_template, is_locked)")
     .eq("id", nodeId)
     .single();
 
@@ -564,10 +610,12 @@ export async function deleteNodeAction(nodeId: string) {
   const tmpl = node.reclassification_templates as unknown as {
     organization_id: string;
     is_template: boolean;
+    is_locked: boolean;
   };
   if (!canAccessTemplate(tmpl.organization_id, tmpl.is_template, currentUser.profile.organization_id, currentUser.roles)) {
     return { error: "Nodo non trovato" };
   }
+  if (tmpl.is_locked) return { error: LOCKED_ERROR };
 
   // Check for children
   const { data: children } = await admin
@@ -616,14 +664,14 @@ export async function reorderNodesAction(orderedNodeIds: string[]) {
   const templateId = allNodes[0].template_id;
   const { data: tmplData } = await admin
     .from("reclassification_templates")
-    .select("organization_id, is_template")
+    .select("organization_id, is_template, is_locked")
     .eq("id", templateId)
     .single();
 
-  if (!tmplData || tmplData.organization_id !== currentUser.profile.organization_id) {
+  if (!tmplData || !canAccessTemplate(tmplData.organization_id, tmplData.is_template, currentUser.profile.organization_id, currentUser.roles)) {
     return { error: "Non autorizzato" };
   }
-  if (tmplData.is_template && !isSuperadmin(currentUser.roles)) return { error: "Il template predefinito non può essere modificato" };
+  if (tmplData.is_locked) return { error: LOCKED_ERROR };
 
   // Bulk update order_index — use the validated node IDs only
   const validIds = new Set(allNodes.map((n) => n.id));
@@ -650,7 +698,7 @@ export async function moveNodeAction(nodeId: string, newParentId: string | null)
   // Verify ownership
   const { data: node } = await admin
     .from("reclassification_nodes")
-    .select("template_id, parent_id, reclassification_templates(organization_id, is_template)")
+    .select("template_id, parent_id, reclassification_templates(organization_id, is_template, is_locked)")
     .eq("id", nodeId)
     .single();
 
@@ -659,12 +707,27 @@ export async function moveNodeAction(nodeId: string, newParentId: string | null)
   const tmpl = node.reclassification_templates as unknown as {
     organization_id: string;
     is_template: boolean;
+    is_locked: boolean;
   };
   if (!canAccessTemplate(tmpl.organization_id, tmpl.is_template, currentUser.profile.organization_id, currentUser.roles)) {
     return { error: "Nodo non trovato" };
   }
+  if (tmpl.is_locked) return { error: LOCKED_ERROR };
 
   if (nodeId === newParentId) return { error: "Non puoi spostare un nodo sotto se stesso" };
+
+  // Block moving under a leaf that has transactions linked
+  if (newParentId) {
+    const { data: linkedTx } = await admin
+      .from("transactions")
+      .select("id")
+      .eq("reclassification_node_id", newParentId)
+      .limit(1);
+
+    if (linkedTx && linkedTx.length > 0) {
+      return { error: "Impossibile spostare sotto questo nodo: ha dei movimenti collegati. Sposta prima i movimenti su un altro nodo." };
+    }
+  }
 
   // Prevent cycle: cannot move under own descendant
   if (newParentId) {
@@ -849,7 +912,7 @@ export async function updateNodeRefsAction(totalNodeId: string, refNodeIds: stri
 
   const { data: node } = await admin
     .from("reclassification_nodes")
-    .select("template_id, is_total, reclassification_templates(organization_id, is_template)")
+    .select("template_id, is_total, reclassification_templates(organization_id, is_template, is_locked)")
     .eq("id", totalNodeId)
     .single();
 
@@ -858,10 +921,12 @@ export async function updateNodeRefsAction(totalNodeId: string, refNodeIds: stri
   const tmpl = node.reclassification_templates as unknown as {
     organization_id: string;
     is_template: boolean;
+    is_locked: boolean;
   };
   if (!canAccessTemplate(tmpl.organization_id, tmpl.is_template, currentUser.profile.organization_id, currentUser.roles)) {
     return { error: "Nodo non trovato" };
   }
+  if (tmpl.is_locked) return { error: LOCKED_ERROR };
   if (!node.is_total) return { error: "Il nodo non è una riga totale" };
 
   await admin.from("reclassification_node_refs").delete().eq("total_node_id", totalNodeId);
@@ -877,4 +942,79 @@ export async function updateNodeRefsAction(totalNodeId: string, refNodeIds: stri
 
   revalidatePath("/settings/reclassification");
   return { success: true };
+}
+
+// ─── Import Action ───
+
+export async function importSchemaAction(
+  templateName: string,
+  importedNodes: { code: string; name: string; description: string | null; sign: "positive" | "negative"; order_index: number; is_total: boolean; formula: string | null; parent_full_code: string | null; full_code: string }[],
+  importedRefs: { total_full_code: string; ref_full_code: string }[]
+) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+  if (!canManageReclassification(currentUser.roles)) return { error: "Non autorizzato" };
+
+  const admin = createAdminClient();
+  const isSuper = isSuperadmin(currentUser.roles);
+  const organizationId = currentUser.profile.organization_id;
+
+  if (!isSuper && !organizationId) return { error: "Organizzazione non trovata" };
+
+  const { data: template, error: tmplError } = await admin
+    .from("reclassification_templates")
+    .insert({
+      organization_id: isSuper ? null : organizationId,
+      name: templateName,
+      is_template: isSuper,
+      created_by: currentUser.profile.id,
+    })
+    .select()
+    .single();
+
+  if (tmplError) return { error: `Errore creazione schema: ${tmplError.message}` };
+
+  // Insert nodes level by level using full_code → id mapping
+  const fullCodeToId = new Map<string, string>();
+  const sorted = [...importedNodes].sort(
+    (a, b) => a.full_code.split(".").length - b.full_code.split(".").length
+  );
+
+  for (const node of sorted) {
+    const parentId = node.parent_full_code ? fullCodeToId.get(node.parent_full_code) ?? null : null;
+
+    const { data: created, error } = await admin
+      .from("reclassification_nodes")
+      .insert({
+        template_id: template.id,
+        parent_id: parentId,
+        code: node.code,
+        full_code: "",
+        name: node.name,
+        description: node.description,
+        sign: node.sign,
+        order_index: node.order_index,
+        is_total: node.is_total,
+        formula: node.formula,
+      })
+      .select("id, full_code")
+      .single();
+
+    if (error) return { error: `Errore nodo ${node.code}: ${error.message}` };
+    if (created) fullCodeToId.set(created.full_code, created.id);
+  }
+
+  for (const ref of importedRefs) {
+    const totalId = fullCodeToId.get(ref.total_full_code);
+    const refId = fullCodeToId.get(ref.ref_full_code);
+    if (totalId && refId) {
+      await admin.from("reclassification_node_refs").insert({
+        total_node_id: totalId,
+        ref_node_id: refId,
+      });
+    }
+  }
+
+  revalidatePath("/settings/reclassification");
+  return { success: true, template };
 }

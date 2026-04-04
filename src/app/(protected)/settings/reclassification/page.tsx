@@ -12,6 +12,10 @@ import {
   Shield,
   ChevronDown,
   Download,
+  Upload,
+  Lock,
+  Unlock,
+  MoreHorizontal,
 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n/context";
 import { Button } from "@/components/ui/button";
@@ -34,13 +38,17 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { useRef } from "react";
 import type { ReclassificationTemplate } from "@/types/supabase";
+import { parseJsonImport, parseExcelImport } from "@/lib/reclassification-import";
 import {
   createTemplateAction,
   deleteTemplateAction,
   cloneTemplateAction,
   setBaseTemplateAction,
+  toggleLockTemplateAction,
   seedReclassificationAction,
+  importSchemaAction,
 } from "@/app/actions/reclassification";
 
 export default function ReclassificationPage() {
@@ -150,6 +158,51 @@ export default function ReclassificationPage() {
     loadTemplates();
   }
 
+  async function handleToggleLock(template: ReclassificationTemplate) {
+    const result = await toggleLockTemplateAction(template.id);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(result.is_locked ? t("reclassification.locked") : t("reclassification.unlocked"));
+    loadTemplates();
+  }
+
+  const importFileRef = useRef<HTMLInputElement>(null);
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = ""; // Reset so same file can be re-selected
+
+    try {
+      let parsed;
+      if (file.name.endsWith(".json")) {
+        const text = await file.text();
+        parsed = parseJsonImport(text);
+      } else if (file.name.endsWith(".xlsx") || file.name.endsWith(".xls")) {
+        const buffer = await file.arrayBuffer();
+        parsed = parseExcelImport(buffer);
+      } else {
+        toast.error("Formato non supportato. Usa .json o .xlsx");
+        return;
+      }
+
+      setIsSubmitting(true);
+      const result = await importSchemaAction(parsed.name, parsed.nodes, parsed.refs);
+      setIsSubmitting(false);
+
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success(t("reclassification.imported"));
+      loadTemplates();
+    } catch (err) {
+      toast.error(`Errore nell'importazione: ${err instanceof Error ? err.message : "Errore sconosciuto"}`);
+    }
+  }
+
   async function handleSeed() {
     setIsSubmitting(true);
     const result = await seedReclassificationAction();
@@ -195,9 +248,20 @@ export default function ReclassificationPage() {
                 <Plus className="h-4 w-4 mr-2" />
                 {t("reclassification.newReclassified")}
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => importFileRef.current?.click()} disabled={isSubmitting}>
+                <Upload className="h-4 w-4 mr-2" />
+                {t("reclassification.importJson")} / Excel
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+        <input
+          ref={importFileRef}
+          type="file"
+          accept=".json,.xlsx,.xls"
+          className="hidden"
+          onChange={handleImportFile}
+        />
       </div>
 
       <p className="text-sm text-muted-foreground">
@@ -245,6 +309,12 @@ export default function ReclassificationPage() {
                       <TooltipContent>{t("reclassification.baseTooltip")}</TooltipContent>
                     </Tooltip>
                   )}
+                  {template.is_locked && (
+                    <Badge variant="outline" className="text-amber-600 border-amber-300">
+                      <Lock className="h-3 w-3 mr-1" />
+                      {t("reclassification.lockedBadge")}
+                    </Badge>
+                  )}
                 </div>
                 {template.description && (
                   <span className="text-sm text-muted-foreground">
@@ -256,6 +326,14 @@ export default function ReclassificationPage() {
               {/* Actions: superadmin on any, accountant on org templates */}
               {(isSuperadmin || (isAccountant && !template.is_template)) && (
                 <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleToggleLock(template)}
+                    title={template.is_locked ? t("reclassification.unlock") : t("reclassification.lock")}
+                  >
+                    {template.is_locked ? <Lock className="h-4 w-4 text-amber-500" /> : <Unlock className="h-4 w-4" />}
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

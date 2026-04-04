@@ -4,6 +4,8 @@ export type Organization = {
   slug: string;
   is_active: boolean;
   currency: string;
+  fiscal_code: string | null;
+  vat_number: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -252,6 +254,7 @@ export type ReclassificationTemplate = {
   is_template: boolean;
   is_active: boolean;
   is_base: boolean;
+  is_locked: boolean;
   cloned_from_id: string | null;
   created_by: string | null;
   created_at: string;
@@ -352,7 +355,6 @@ export type SdiAccount = {
   name: string;
   code: string;
   pec: string | null;
-  fiscal_code: string;
   is_active: boolean;
   created_by: string | null;
   created_at: string;

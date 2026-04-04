@@ -400,6 +400,13 @@ export function NodeDetailForm({
         </Card>
       )}
 
+      {/* Validation warnings */}
+      {isTotal && !useCustomFormula && selectedRefIds.size === 0 && (
+        <p className="text-xs text-amber-600 dark:text-amber-400">
+          {t("reclassification.node.warningNoRefs")}
+        </p>
+      )}
+
       {/* Action bar */}
       {isAccountant && (
         <div className="flex items-center gap-2 pt-2">

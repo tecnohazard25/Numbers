@@ -12,7 +12,6 @@ interface SdiAccountInput {
   name: string;
   code: string;
   pec?: string | null;
-  fiscal_code: string;
 }
 
 export async function createSdiAccountAction(data: SdiAccountInput) {
@@ -26,7 +25,6 @@ export async function createSdiAccountAction(data: SdiAccountInput) {
   if (!data.name?.trim()) return { error: "Nome obbligatorio" };
   if (!data.code?.trim()) return { error: "Codice SDI obbligatorio" };
   if (data.code.trim().length !== 7) return { error: "Il codice SDI deve essere di 7 caratteri" };
-  if (!data.fiscal_code?.trim()) return { error: "Codice fiscale/P.IVA obbligatorio" };
 
   const admin = createAdminClient();
 
@@ -37,7 +35,6 @@ export async function createSdiAccountAction(data: SdiAccountInput) {
       name: data.name.trim(),
       code: data.code.trim().toUpperCase(),
       pec: data.pec?.trim() || null,
-      fiscal_code: data.fiscal_code.trim().toUpperCase(),
       created_by: currentUser.profile.id,
     })
     .select()
@@ -62,7 +59,6 @@ export async function updateSdiAccountAction(accountId: string, data: SdiAccount
   if (!data.name?.trim()) return { error: "Nome obbligatorio" };
   if (!data.code?.trim()) return { error: "Codice SDI obbligatorio" };
   if (data.code.trim().length !== 7) return { error: "Il codice SDI deve essere di 7 caratteri" };
-  if (!data.fiscal_code?.trim()) return { error: "Codice fiscale/P.IVA obbligatorio" };
 
   const admin = createAdminClient();
 
@@ -82,7 +78,6 @@ export async function updateSdiAccountAction(accountId: string, data: SdiAccount
       name: data.name.trim(),
       code: data.code.trim().toUpperCase(),
       pec: data.pec?.trim() || null,
-      fiscal_code: data.fiscal_code.trim().toUpperCase(),
     })
     .eq("id", accountId)
     .select()

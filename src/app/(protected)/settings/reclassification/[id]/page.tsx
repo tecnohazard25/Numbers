@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { ArrowLeft, FileSpreadsheet, Plus, ChevronsDownUp } from "lucide-react";
+import { ArrowLeft, FileSpreadsheet, Plus, ChevronsDownUp, Download, Upload, Lock } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
 import { useTranslation } from "@/lib/i18n/context";
@@ -25,9 +25,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { Badge } from "@/components/ui/badge";
 import { NodeTree } from "@/components/settings/reclassification/node-tree";
 import { NodeDetailForm } from "@/components/settings/reclassification/node-detail-form";
-import { buildTree } from "@/lib/reclassification-utils";
+import { buildTree, flattenTreeWithDepth } from "@/lib/reclassification-utils";
+import { exportToExcel, exportToJson } from "@/lib/reclassification-export";
 import {
   updateTemplateAction,
   createNodeAction,
@@ -186,6 +194,57 @@ export default function TemplateEditorPage() {
     setExpandedIds(new Set());
   }
 
+  // Keyboard navigation
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      // Only when tree panel is focused (not in input/textarea)
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+      const visibleNodes = flattenTreeWithDepth(tree, expandedIds);
+      if (visibleNodes.length === 0) return;
+
+      const currentIndex = selectedNodeId
+        ? visibleNodes.findIndex((n) => n.id === selectedNodeId)
+        : -1;
+
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(currentIndex + 1, visibleNodes.length - 1);
+        setSelectedNodeId(visibleNodes[next].id);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const prev = Math.max(currentIndex - 1, 0);
+        setSelectedNodeId(visibleNodes[prev].id);
+      } else if (e.key === "ArrowRight" && selectedNodeId) {
+        e.preventDefault();
+        setExpandedIds((prev) => new Set([...prev, selectedNodeId]));
+      } else if (e.key === "ArrowLeft" && selectedNodeId) {
+        e.preventDefault();
+        setExpandedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(selectedNodeId);
+          return next;
+        });
+      } else if (e.key === "Escape") {
+        setSelectedNodeId(null);
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [tree, expandedIds, selectedNodeId]);
+
+  function handleExportExcel() {
+    if (!template) return;
+    exportToExcel(template.name, nodes, nodeRefs);
+  }
+
+  function handleExportJson() {
+    if (!template) return;
+    exportToJson(template.name, nodes, nodeRefs);
+  }
+
   function handleToggleExpand(nodeId: string) {
     setExpandedIds((prev) => {
       const next = new Set(prev);
@@ -303,7 +362,7 @@ export default function TemplateEditorPage() {
     : null;
 
   // Superadmin can edit system templates; for others, system templates are read-only
-  const isReadOnly = template.is_template && !isSuperadmin;
+  const isReadOnly = (template.is_template && !isSuperadmin) || template.is_locked;
   const canEdit = (isAccountant || isSuperadmin) && !isReadOnly;
   // Non-base schemas can only have total nodes (no hierarchy)
   const isNonBaseSchema = !template.is_base && !template.is_template;
@@ -347,7 +406,28 @@ export default function TemplateEditorPage() {
               {template.name}
             </h1>
           )}
+          {template.is_locked && (
+            <Badge variant="outline" className="text-amber-600 border-amber-300 ml-2 shrink-0">
+              <Lock className="h-3 w-3 mr-1" />
+              {t("reclassification.lockedBadge")}
+            </Badge>
+          )}
         </div>
+        {/* Export dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
+            <Download className="h-4 w-4 mr-1.5" />
+            {t("common.exportExcel")}
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={handleExportExcel}>
+              {t("reclassification.exportExcel")}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={handleExportJson}>
+              {t("reclassification.exportJson")}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Split view */}

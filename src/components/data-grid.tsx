@@ -610,14 +610,42 @@ export function DataGrid<T>({
     return rowData.filter((r) => !(r as any).__isGroupRow);
   }, [rowData]);
 
-  // Reset selection when data changes (e.g. after delete)
+  // Preserve selection when data refreshes — re-select rows that still exist
+  const prevSelectedIdsRef = useRef<Set<string>>(new Set());
+
   useEffect(() => {
-    setSelectedRows([]);
-    setWantAllPages(false);
-    if (gridApiRef.current) {
-      gridApiRef.current.deselectAll();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const prevIds = prevSelectedIdsRef.current;
+    if (prevIds.size === 0) return;
+
+    // Find rows that still exist in new data
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const stillExist = allDataRows.filter((r) => prevIds.has((r as any).id));
+
+    if (stillExist.length > 0) {
+      setSelectedRows(stillExist);
+      // Re-select in grid after it renders the new data
+      requestAnimationFrame(() => {
+        if (!gridApiRef.current) return;
+        gridApiRef.current.forEachNode((node) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          if (node.data && prevIds.has((node.data as any).id)) {
+            node.setSelected(true);
+          }
+        });
+      });
+    } else {
+      // All previously selected rows were deleted
+      setSelectedRows([]);
+      setWantAllPages(false);
     }
-  }, [rowData]);
+  }, [allDataRows]);
+
+  // Track selected IDs for persistence across refreshes
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    prevSelectedIdsRef.current = new Set(selectedRows.map((r) => (r as any).id));
+  }, [selectedRows]);
 
   const onSelectionChanged = useCallback(() => {
     if (!gridApiRef.current || !onDelete) return;

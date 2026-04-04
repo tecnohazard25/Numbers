@@ -23,19 +23,22 @@ import {
   ArrowLeftRight,
   Loader2,
   Paperclip,
+  BarChart3,
   FolderInput,
+  Link2,
   Pencil,
   Search,
   Sparkles,
   Trash2,
 } from "lucide-react";
 import { deleteTransactionsAction, updateTransactionAction } from "@/app/actions/transactions";
-import { classifyTransactionsBatchAction } from "@/app/actions/gemini";
+import { classifyTransactionsBatchAction, matchSubjectsBatchAction } from "@/app/actions/gemini";
 import { TransactionDirectionBadge } from "@/components/transactions/TransactionDirectionBadge";
 import { TransactionTotals } from "@/components/transactions/TransactionTotals";
 import { TransactionForm } from "./_components/transaction-form";
 import { ImportDialog } from "@/components/transactions/import/ImportDialog";
 import { AccountPicker, type AccountNode } from "@/components/account-picker";
+import { TransactionDashboard } from "@/components/transactions/TransactionDashboard";
 import { useTranslation } from "@/lib/i18n/context";
 import type {
   CollectionResource,
@@ -89,7 +92,9 @@ export default function TransactionsPage() {
   const [canWrite, setCanWrite] = useState(false);
   const [leafNodes, setLeafNodes] = useState<{ full_code: string; name: string; sign: "positive" | "negative"; id: string }[]>([]);
   const [accountNodes, setAccountNodes] = useState<AccountNode[]>([]);
+  const [allSubjects, setAllSubjects] = useState<{ id: string; name: string }[]>([]);
   const [isClassifyingBulk, setIsClassifyingBulk] = useState(false);
+  const [showDashboard, setShowDashboard] = useState(false);
 
   // Filters
   const [selectedResourceId, setSelectedResourceId] = useState<string>("");
@@ -143,6 +148,18 @@ export default function TransactionsPage() {
       if (activeResources.length > 0) {
         setSelectedResourceId(activeResources[0].id);
       }
+
+      // Load subjects for AI matching
+      try {
+        const subRes = await fetch(`/api/subjects?orgId=${orgId}`, { signal });
+        const subData = await subRes.json();
+        setAllSubjects(
+          (subData.subjects ?? []).map((s: { id: string; first_name: string | null; last_name: string | null; business_name: string | null; type: string }) => ({
+            id: s.id,
+            name: s.type === "person" ? `${s.last_name ?? ""} ${s.first_name ?? ""}`.trim() : s.business_name ?? "",
+          })).filter((s: { name: string }) => s.name)
+        );
+      } catch { /* ignore */ }
 
       // Load leaf nodes for AI classification
       try {
@@ -466,6 +483,18 @@ export default function TransactionsPage() {
           <ArrowLeftRight className="h-6 w-6" />
           {t("transactions.title")}
         </h1>
+        <div className="flex-1" />
+        {selectedResourceId && (
+          <Button
+            variant={showDashboard ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowDashboard((v) => !v)}
+            className="cursor-pointer"
+          >
+            <BarChart3 className="h-4 w-4 mr-1" />
+            Dashboard
+          </Button>
+        )}
       </div>
 
       {/* Primary filter: collection resource */}
@@ -607,6 +636,15 @@ export default function TransactionsPage() {
         </div>
       ) : (
         <>
+          {/* Dashboard */}
+          {showDashboard && (
+            <TransactionDashboard
+              orgId={orgId}
+              collectionResourceId={selectedResourceId}
+              locale={locale}
+            />
+          )}
+
           {/* Grid */}
           <DataGrid
             rowData={transactionsWithBalance}
@@ -693,6 +731,53 @@ export default function TransactionsPage() {
                     onClick: (selected) => {
                       setAssignTargets(selected.filter((tx) => !tx.is_balance_row));
                       setAssignAccountOpen(true);
+                    },
+                  },
+                  {
+                    label: t("transactions.matchSubjects"),
+                    icon: <Link2 className="h-3.5 w-3.5" />,
+                    disabled: allSubjects.length === 0,
+                    onClick: async (selected) => {
+                      const toMatch = selected.filter((tx) => !tx.is_balance_row && !tx.subjects);
+                      if (toMatch.length === 0) {
+                        toast.info(t("transactions.allHaveSubjects"));
+                        return;
+                      }
+                      setIsClassifyingBulk(true);
+                      const result = await matchSubjectsBatchAction(
+                        toMatch.map((tx) => ({ id: tx.id, description: tx.description || "" })),
+                        allSubjects
+                      );
+                      if (!result.success) {
+                        toast.error(result.error);
+                        setIsClassifyingBulk(false);
+                        return;
+                      }
+                      let matched = 0;
+                      for (const tx of toMatch) {
+                        const suggestion = result.results[tx.id];
+                        if (suggestion?.confident && suggestion.subject_id) {
+                          await updateTransactionAction(tx.id, {
+                            collection_resource_id: tx.collection_resource_id,
+                            subject_id: suggestion.subject_id,
+                            direction: tx.direction,
+                            amount: Number(tx.amount),
+                            transaction_date: tx.transaction_date,
+                            description: tx.description,
+                            reference: tx.reference,
+                            is_balance_row: tx.is_balance_row,
+                            reclassification_node_id: tx.reclassification_node_id,
+                          });
+                          matched++;
+                        }
+                      }
+                      setIsClassifyingBulk(false);
+                      if (matched > 0) {
+                        toast.success(`${matched}/${toMatch.length} soggetti associati`);
+                        loadTransactions();
+                      } else {
+                        toast.info(t("transactions.noSubjectsMatched"));
+                      }
                     },
                   },
                 ],

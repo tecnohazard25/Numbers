@@ -38,7 +38,6 @@ export function SdiAccountsSection({ orgId }: Props) {
   const [formName, setFormName] = useState("");
   const [formCode, setFormCode] = useState("");
   const [formPec, setFormPec] = useState("");
-  const [formFiscalCode, setFormFiscalCode] = useState("");
 
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<SdiAccount | null>(null);
@@ -59,13 +58,13 @@ export function SdiAccountsSection({ orgId }: Props) {
 
   function openCreate() {
     setEditing(null);
-    setFormName(""); setFormCode(""); setFormPec(""); setFormFiscalCode("");
+    setFormName(""); setFormCode(""); setFormPec("");
     setFormOpen(true);
   }
 
   function openEdit(acc: SdiAccount) {
     setEditing(acc);
-    setFormName(acc.name); setFormCode(acc.code); setFormPec(acc.pec ?? ""); setFormFiscalCode(acc.fiscal_code);
+    setFormName(acc.name); setFormCode(acc.code); setFormPec(acc.pec ?? "");
     setFormOpen(true);
   }
 
@@ -75,7 +74,6 @@ export function SdiAccountsSection({ orgId }: Props) {
       name: formName,
       code: formCode,
       pec: formPec || null,
-      fiscal_code: formFiscalCode,
     };
 
     if (editing) {
@@ -112,7 +110,7 @@ export function SdiAccountsSection({ orgId }: Props) {
     setIsSubmitting(false);
   }
 
-  const isSaveDisabled = isSubmitting || !formName.trim() || !formCode.trim() || formCode.trim().length !== 7 || !formFiscalCode.trim();
+  const isSaveDisabled = isSubmitting || !formName.trim() || !formCode.trim() || formCode.trim().length !== 7;
 
   if (loading) {
     return <p className="text-muted-foreground text-center py-8">{t("common.loading")}</p>;
@@ -161,7 +159,6 @@ export function SdiAccountsSection({ orgId }: Props) {
                 <div className="min-w-0">
                   <span className="font-medium text-sm block truncate">{acc.name}</span>
                   <span className="text-xs text-muted-foreground flex items-center gap-2">
-                    <span className="font-mono">{acc.fiscal_code}</span>
                     {acc.pec && <span>{acc.pec}</span>}
                     {!acc.is_active && <span> — {t("settings.sdiAccounts.deactivated")}</span>}
                   </span>
@@ -211,10 +208,6 @@ export function SdiAccountsSection({ orgId }: Props) {
                 <Label htmlFor="sdiCode">{t("settings.sdiAccounts.code")}</Label>
                 <Input id="sdiCode" value={formCode} onChange={(e) => setFormCode(e.target.value)} placeholder={t("settings.sdiAccounts.codePlaceholder")} maxLength={7} />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sdiFiscalCode">{t("settings.sdiAccounts.fiscalCode")}</Label>
-              <Input id="sdiFiscalCode" value={formFiscalCode} onChange={(e) => setFormFiscalCode(e.target.value)} placeholder={t("settings.sdiAccounts.fiscalCodePlaceholder")} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="sdiPec">{t("settings.sdiAccounts.pec")} ({t("common.optional")})</Label>

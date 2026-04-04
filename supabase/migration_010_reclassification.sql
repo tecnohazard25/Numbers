@@ -33,6 +33,7 @@ CREATE TABLE reclassification_templates (
   is_template boolean NOT NULL DEFAULT false,
   is_active boolean NOT NULL DEFAULT true,
   is_base boolean NOT NULL DEFAULT false,
+  is_locked boolean NOT NULL DEFAULT false,
   cloned_from_id uuid REFERENCES reclassification_templates(id) ON DELETE SET NULL,
   created_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),

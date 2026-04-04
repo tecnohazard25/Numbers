@@ -345,3 +345,237 @@ export async function generateRandomTransactionsAction(
 
   return { success: true, created };
 }
+
+// --- Entities generation ---
+
+const BRANCH_NAMES = [
+  "Cardiologia", "Ortopedia", "Fisioterapia", "Dermatologia", "Oculistica",
+  "Otorinolaringoiatria", "Ginecologia", "Urologia", "Neurologia", "Pneumologia",
+  "Gastroenterologia", "Endocrinologia", "Radiologia", "Chirurgia Generale",
+  "Medicina Interna", "Pediatria", "Psichiatria", "Allergologia", "Reumatologia",
+  "Oncologia",
+];
+
+const WORKPLACE_DATA = [
+  { name: "Sede Centrale", address: "Via Roma, 45" },
+  { name: "Ambulatorio Nord", address: "Corso Italia, 120" },
+  { name: "Poliambulatorio Sud", address: "Via Garibaldi, 78" },
+  { name: "Centro Diagnostico", address: "Viale della Repubblica, 200" },
+  { name: "Sede Ospedaliera", address: "Via Mazzini, 15" },
+  { name: "Ambulatorio Est", address: "Via Dante, 33" },
+  { name: "Centro Riabilitativo", address: "Via Cavour, 90" },
+  { name: "Sede Universitaria", address: "Via Verdi, 55" },
+];
+
+const ROOM_PREFIXES = [
+  "Ambulatorio", "Studio", "Sala", "Box", "Stanza",
+];
+
+const DOCTOR_NAMES = [
+  "Dr. Marco Rossi", "Dr.ssa Anna Bianchi", "Dr. Giuseppe Ferrari",
+  "Dr.ssa Maria Romano", "Dr. Alessandro Colombo", "Dr.ssa Giulia Ricci",
+  "Dr. Francesco Marino", "Dr.ssa Elena Greco", "Dr. Luca Bruno",
+  "Dr.ssa Sara Conti", "Dr. Andrea De Luca", "Dr.ssa Chiara Mancini",
+  "Dr. Davide Costa", "Dr.ssa Francesca Giordano", "Dr. Matteo Rizzo",
+  "Dr.ssa Laura Lombardi", "Dr. Lorenzo Moretti", "Dr.ssa Valentina Barbieri",
+  "Dr. Simone Fontana", "Dr.ssa Martina Santoro",
+];
+
+const ACTIVITY_NAMES = [
+  { name: "Visita Cardiologica", duration: 30, price: 120 },
+  { name: "Visita Ortopedica", duration: 25, price: 100 },
+  { name: "Seduta di Fisioterapia", duration: 45, price: 60 },
+  { name: "Visita Dermatologica", duration: 20, price: 90 },
+  { name: "Visita Oculistica", duration: 30, price: 110 },
+  { name: "Ecografia Addominale", duration: 30, price: 80 },
+  { name: "Elettrocardiogramma", duration: 15, price: 50 },
+  { name: "Radiografia Torace", duration: 15, price: 45 },
+  { name: "Risonanza Magnetica", duration: 45, price: 250 },
+  { name: "TAC", duration: 30, price: 200 },
+  { name: "Visita Ginecologica", duration: 30, price: 120 },
+  { name: "Visita Neurologica", duration: 40, price: 130 },
+  { name: "Visita Urologica", duration: 25, price: 100 },
+  { name: "Analisi del Sangue", duration: 10, price: 35 },
+  { name: "Visita Pneumologica", duration: 30, price: 110 },
+  { name: "Spirometria", duration: 20, price: 40 },
+  { name: "Holter Cardiaco", duration: 15, price: 70 },
+  { name: "Ecocardiogramma", duration: 30, price: 120 },
+  { name: "Visita Endocrinologica", duration: 30, price: 100 },
+  { name: "Gastroscopia", duration: 30, price: 180 },
+  { name: "Colonscopia", duration: 45, price: 220 },
+  { name: "Visita Pediatrica", duration: 25, price: 90 },
+  { name: "Seduta Psicoterapia", duration: 50, price: 80 },
+  { name: "Infiltrazione Articolare", duration: 15, price: 70 },
+  { name: "Medicazione", duration: 15, price: 30 },
+];
+
+function toSnakeCode(str: string): string {
+  return str
+    .trim()
+    .toLowerCase()
+    .replace(/[àáâãäå]/g, "a")
+    .replace(/[èéêë]/g, "e")
+    .replace(/[ìíîï]/g, "i")
+    .replace(/[òóôõö]/g, "o")
+    .replace(/[ùúûü]/g, "u")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+export async function generateRandomEntitiesAction(
+  organizationId: string
+) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || !currentUser.roles.includes("superadmin")) {
+    return { error: "Non autorizzato" };
+  }
+
+  const admin = createAdminClient();
+
+  const counts = { branches: 0, workplaces: 0, rooms: 0, doctors: 0, activities: 0 };
+
+  // 1. Generate branches
+  const branchIds: string[] = [];
+  const branchCount = randInt(8, 15);
+  const selectedBranches = [...BRANCH_NAMES].sort(() => Math.random() - 0.5).slice(0, branchCount);
+
+  for (const name of selectedBranches) {
+    const { data, error } = await admin
+      .from("entities")
+      .insert({
+        organization_id: organizationId,
+        type: "branch",
+        code: toSnakeCode(name),
+        name,
+        is_active: true,
+        created_by: currentUser.user.id,
+      })
+      .select("id")
+      .single();
+    if (!error && data) {
+      branchIds.push(data.id);
+      counts.branches++;
+    }
+  }
+
+  // 2. Generate workplaces
+  const workplaceIds: string[] = [];
+  const workplaceCount = randInt(3, Math.min(6, WORKPLACE_DATA.length));
+  const selectedWorkplaces = [...WORKPLACE_DATA].sort(() => Math.random() - 0.5).slice(0, workplaceCount);
+
+  for (const wp of selectedWorkplaces) {
+    const city = rand(CITIES);
+    const { data, error } = await admin
+      .from("entities")
+      .insert({
+        organization_id: organizationId,
+        type: "workplace",
+        code: toSnakeCode(wp.name),
+        name: wp.name,
+        workplace_address: `${wp.address}, ${city.zip}${randInt(10, 99)} ${city.city} (${city.province})`,
+        is_active: true,
+        created_by: currentUser.user.id,
+      })
+      .select("id")
+      .single();
+    if (!error && data) {
+      workplaceIds.push(data.id);
+      counts.workplaces++;
+    }
+  }
+
+  // 3. Generate rooms (2-4 per workplace)
+  for (const wpId of workplaceIds) {
+    const roomCount = randInt(2, 4);
+    for (let r = 0; r < roomCount; r++) {
+      const prefix = rand(ROOM_PREFIXES);
+      const num = r + 1;
+      const name = `${prefix} ${num}`;
+      const { error } = await admin
+        .from("entities")
+        .insert({
+          organization_id: organizationId,
+          type: "room",
+          code: toSnakeCode(`${name}_${counts.rooms + 1}`),
+          name,
+          room_workplace_id: wpId,
+          is_active: true,
+          created_by: currentUser.user.id,
+        });
+      if (!error) counts.rooms++;
+    }
+  }
+
+  // 4. Generate doctors
+  const doctorCount = randInt(8, Math.min(15, DOCTOR_NAMES.length));
+  const selectedDoctors = [...DOCTOR_NAMES].sort(() => Math.random() - 0.5).slice(0, doctorCount);
+
+  for (const name of selectedDoctors) {
+    const code = toSnakeCode(name.replace(/Dr\.\s*|Dr\.ssa\s*/g, ""));
+    const { data, error } = await admin
+      .from("entities")
+      .insert({
+        organization_id: organizationId,
+        type: "doctor",
+        code,
+        name,
+        is_active: Math.random() > 0.1,
+        created_by: currentUser.user.id,
+      })
+      .select("id")
+      .single();
+    if (!error && data) {
+      counts.doctors++;
+      // Associate 1-3 branches
+      const numBranches = Math.min(randInt(1, 3), branchIds.length);
+      const docBranches = [...branchIds].sort(() => Math.random() - 0.5).slice(0, numBranches);
+      for (const bid of docBranches) {
+        await admin.from("entity_doctor_branches").insert({ doctor_id: data.id, branch_id: bid });
+      }
+      // Associate 1-2 workplaces
+      const numWps = Math.min(randInt(1, 2), workplaceIds.length);
+      const docWps = [...workplaceIds].sort(() => Math.random() - 0.5).slice(0, numWps);
+      for (const wid of docWps) {
+        await admin.from("entity_doctor_workplaces").insert({ doctor_id: data.id, workplace_id: wid });
+      }
+    }
+  }
+
+  // 5. Generate activities
+  const activityCount = randInt(12, Math.min(20, ACTIVITY_NAMES.length));
+  const selectedActivities = [...ACTIVITY_NAMES].sort(() => Math.random() - 0.5).slice(0, activityCount);
+
+  for (const act of selectedActivities) {
+    const branchId = branchIds.length > 0 ? rand(branchIds) : null;
+    const priceVariation = 1 + (Math.random() * 0.4 - 0.2); // +/-20%
+    const { data, error } = await admin
+      .from("entities")
+      .insert({
+        organization_id: organizationId,
+        type: "activity",
+        code: toSnakeCode(act.name),
+        name: act.name,
+        activity_branch_id: branchId,
+        activity_avg_selling_price: parseFloat((act.price * priceVariation).toFixed(2)),
+        activity_duration_minutes: act.duration,
+        activity_avg_cost_lab: Math.random() > 0.5 ? parseFloat((randInt(500, 3000) / 100).toFixed(2)) : null,
+        activity_avg_cost_staff: parseFloat((randInt(1000, 5000) / 100).toFixed(2)),
+        activity_avg_cost_materials: parseFloat((randInt(200, 1500) / 100).toFixed(2)),
+        is_active: Math.random() > 0.05,
+        created_by: currentUser.user.id,
+      })
+      .select("id")
+      .single();
+    if (!error && data) {
+      counts.activities++;
+      // Associate 1-3 workplaces
+      const numWps = Math.min(randInt(1, 3), workplaceIds.length);
+      const actWps = [...workplaceIds].sort(() => Math.random() - 0.5).slice(0, numWps);
+      for (const wid of actWps) {
+        await admin.from("entity_activity_workplaces").insert({ activity_id: data.id, workplace_id: wid });
+      }
+    }
+  }
+
+  return { success: true, counts };
+}

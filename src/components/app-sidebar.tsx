@@ -7,6 +7,7 @@ import {
   Contact2,
   EyeOff,
   FileSpreadsheet,
+  FileText,
   Settings,
   Users,
   LayoutDashboard,
@@ -84,6 +85,7 @@ export function AppSidebar({ roles, userName, organizationName, impersonating }:
   const anagraficaItems: NavItem[] = [
     { title: t("sidebar.subjects"), url: "/subjects", icon: Contact2 },
     { title: t("sidebar.transactions"), url: "/transactions", icon: ArrowLeftRight },
+    { title: t("sidebar.invoices"), url: "/invoices", icon: FileText },
   ];
 
   const settingsItems: NavItem[] = [

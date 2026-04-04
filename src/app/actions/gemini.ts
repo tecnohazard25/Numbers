@@ -313,3 +313,74 @@ Rispondi SOLO con un JSON array, un elemento per movimento:
     return { success: false, error: `Errore nella comunicazione con Gemini. Verifica la connessione e riprova.` };
   }
 }
+
+/**
+ * Match transaction descriptions to subjects (batch).
+ * Returns a map of transaction ID -> suggested subject ID.
+ */
+export async function matchSubjectsBatchAction(
+  movements: { id: string; description: string }[],
+  subjects: { id: string; name: string }[]
+): Promise<{ success: true; results: Record<string, { subject_id: string | null; confident: boolean }> } | { success: false; error: string }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { success: false, error: "Chiave API Gemini non configurata. Aggiungi GEMINI_API_KEY nel file .env.local." };
+  if (subjects.length === 0 || movements.length === 0) return { success: true, results: {} };
+
+  const subjectList = subjects.map((s) => `- [${s.id}] ${s.name}`).join("\n");
+
+  const movementsList = movements.map((m, i) =>
+    `${i + 1}. [ID: ${m.id}] "${m.description.replace(/[{}\[\]`]/g, "").substring(0, 300)}"`
+  ).join("\n");
+
+  const prompt = `Sei un assistente contabile. Per ogni movimento bancario, identifica il soggetto (persona o azienda) più probabile tra quelli disponibili.
+
+MOVIMENTI:
+${movementsList}
+
+SOGGETTI DISPONIBILI:
+${subjectList}
+
+REGOLE:
+- Cerca nomi di persone o aziende nella descrizione del movimento
+- Il matching deve essere per nome (anche parziale o con variazioni)
+- Es: "BONIFICO o/c: ROSSI MARCO" -> match con "Marco Rossi"
+- Es: "NEXI PAYMENTS POS" -> nessun match (non è un soggetto specifico)
+- Se non sei sicuro, metti confident: false e subject_id: null
+
+Rispondi SOLO con un JSON array:
+[{"id": "mov_id", "subject_id": "subj_id_or_null", "confident": true}]`;
+
+  try {
+    const response = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.1, responseMimeType: "application/json" },
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return { success: false, error: "Limite di utilizzo Gemini raggiunto. Riprova tra qualche minuto o attiva la fatturazione su aistudio.google.com/billing." };
+      }
+      return { success: false, error: `Errore Gemini (${response.status}). Riprova più tardi.` };
+    }
+
+    const result = await response.json();
+    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!text) return { success: true, results: {} };
+
+    const parsed: Array<{ id: string; subject_id: string | null; confident: boolean }> = JSON.parse(
+      text.replace(/\`\`\`json\n?/g, "").replace(/\`\`\`\n?/g, "").trim()
+    );
+
+    const results: Record<string, { subject_id: string | null; confident: boolean }> = {};
+    for (const item of parsed) {
+      if (item.id) results[item.id] = { subject_id: item.subject_id ?? null, confident: item.confident ?? false };
+    }
+    return { success: true, results };
+  } catch {
+    return { success: false, error: "Errore nella comunicazione con Gemini. Verifica la connessione e riprova." };
+  }
+}

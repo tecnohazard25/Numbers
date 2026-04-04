@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   generateRandomSubjectsAction,
   generateRandomTransactionsAction,
+  generateRandomEntitiesAction,
 } from "@/app/actions/generate-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +18,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, ArrowLeftRight, Database, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Building2, Database, Loader2 } from "lucide-react";
 
 export default function GenerateDataPage() {
   const params = useParams();
@@ -32,6 +33,9 @@ export default function GenerateDataPage() {
   const [txCount, setTxCount] = useState(50);
   const [isTxGenerating, setIsTxGenerating] = useState(false);
   const [txResult, setTxResult] = useState<{ created: number } | null>(null);
+
+  const [isEntGenerating, setIsEntGenerating] = useState(false);
+  const [entResult, setEntResult] = useState<{ counts: { branches: number; workplaces: number; rooms: number; doctors: number; activities: number } } | null>(null);
 
   const [authorized, setAuthorized] = useState(false);
 
@@ -219,6 +223,65 @@ export default function GenerateDataPage() {
           {txResult && (
             <div className="rounded-md bg-green-500/10 text-green-400 p-3 text-sm">
               Creati {txResult.created} movimenti con successo.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Entità random
+          </CardTitle>
+          <CardDescription>
+            Genera un set completo di entità per il centro medico: branche specialistiche,
+            sedi, ambulatori, medici e prestazioni con relazioni tra loro.
+            Vengono generati 8-15 branche, 3-6 sedi, 2-4 ambulatori per sede,
+            8-15 medici e 12-20 prestazioni.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <Button
+            onClick={async () => {
+              setIsEntGenerating(true);
+              setEntResult(null);
+              const res = await generateRandomEntitiesAction(orgId);
+              if (res.error) {
+                toast.error(res.error);
+              } else if (res.counts) {
+                setEntResult({ counts: res.counts });
+                const total = res.counts.branches + res.counts.workplaces + res.counts.rooms + res.counts.doctors + res.counts.activities;
+                toast.success(`${total} entità create con successo`);
+              }
+              setIsEntGenerating(false);
+            }}
+            disabled={isEntGenerating}
+            className="w-full cursor-pointer"
+          >
+            {isEntGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generazione in corso...
+              </>
+            ) : (
+              <>
+                <Building2 className="h-4 w-4 mr-2" />
+                Genera entità
+              </>
+            )}
+          </Button>
+
+          {entResult && (
+            <div className="rounded-md bg-green-500/10 text-green-400 p-3 text-sm space-y-1">
+              <p>Entità create con successo:</p>
+              <ul className="list-disc list-inside text-xs">
+                <li>{entResult.counts.branches} branche</li>
+                <li>{entResult.counts.workplaces} sedi</li>
+                <li>{entResult.counts.rooms} ambulatori</li>
+                <li>{entResult.counts.doctors} medici</li>
+                <li>{entResult.counts.activities} prestazioni</li>
+              </ul>
             </div>
           )}
         </CardContent>

@@ -1,6 +1,11 @@
 -- Migration 014: Electronic Invoices (Fatture Elettroniche)
 -- Fase 9 del gestionale centro medico
 
+-- 0. Aggiunta CF/P.IVA alla organization
+ALTER TABLE organizations
+  ADD COLUMN fiscal_code text,
+  ADD COLUMN vat_number text;
+
 -- 1. Enum types
 CREATE TYPE invoice_direction AS ENUM ('issued', 'received');
 CREATE TYPE invoice_document_type AS ENUM ('invoice', 'credit_note', 'debit_note');
@@ -14,7 +19,6 @@ CREATE TABLE sdi_accounts (
   name text NOT NULL,
   code text NOT NULL,
   pec text,
-  fiscal_code text NOT NULL,
   is_active boolean NOT NULL DEFAULT true,
   created_by uuid REFERENCES profiles(id) ON DELETE SET NULL,
   created_at timestamptz NOT NULL DEFAULT now(),
