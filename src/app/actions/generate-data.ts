@@ -226,3 +226,122 @@ export async function generateRandomSubjectsAction(
 
   return { success: true, created };
 }
+
+// --- Transaction descriptions ---
+
+const IN_DESCRIPTIONS = [
+  "Bonifico da paziente", "Pagamento visita specialistica", "Pagamento esame diagnostico",
+  "Incasso prestazione ambulatoriale", "Bonifico da assicurazione", "Pagamento fisioterapia",
+  "Incasso fattura", "Pagamento consulto medico", "Rimborso da fornitore",
+  "Accredito convenzione ASL", "Incasso ticket sanitario", "Pagamento ecografia",
+  "Bonifico da ente pubblico", "Incasso radiografia", "Pagamento analisi laboratorio",
+  "Accredito stipendio medico convenzionato", "Incasso day hospital",
+  "Pagamento intervento chirurgico ambulatoriale", "Bonifico da paziente privato",
+  "Incasso prestazione infermieristica",
+];
+
+const OUT_DESCRIPTIONS = [
+  "Pagamento fornitore materiale sanitario", "Stipendio personale medico",
+  "Canone affitto locali", "Bolletta energia elettrica", "Bolletta gas",
+  "Acquisto farmaci", "Manutenzione apparecchiature", "Assicurazione responsabilità civile",
+  "Pagamento consulente fiscale", "Acquisto materiale di consumo", "Rata leasing attrezzature",
+  "Pagamento servizio pulizie", "Abbonamento software gestionale", "Contributi INPS",
+  "Pagamento laboratorio analisi esterno", "Acquisto dispositivi medici",
+  "Spese postali e corriere", "Manutenzione impianti", "Pagamento utenze telefoniche",
+  "Tassa rifiuti", "Formazione personale", "Riparazione strumenti diagnostici",
+];
+
+const REFERENCE_PREFIXES = [
+  "BON-", "FAT-", "RIC-", "PAG-", "TRN-", "ACC-", "INC-",
+];
+
+export async function generateRandomTransactionsAction(
+  organizationId: string,
+  count: number
+) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser || !currentUser.roles.includes("superadmin")) {
+    return { error: "Non autorizzato" };
+  }
+
+  if (count < 1 || count > 1000) {
+    return { error: "Inserisci un numero tra 1 e 1000" };
+  }
+
+  const admin = createAdminClient();
+
+  // Fetch active collection resources for this org
+  const { data: resources } = await admin
+    .from("collection_resources")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true)
+    .is("deleted_at", null);
+
+  if (!resources || resources.length === 0) {
+    return { error: "Nessuna risorsa di incasso attiva. Crea almeno una risorsa prima di generare movimenti." };
+  }
+
+  // Fetch subjects for this org (to randomly associate)
+  const { data: subjects } = await admin
+    .from("subjects")
+    .select("id")
+    .eq("organization_id", organizationId)
+    .eq("is_active", true);
+
+  const subjectIds = subjects?.map((s) => s.id) ?? [];
+
+  let created = 0;
+
+  // Generate transactions spread over the last 12 months
+  const now = new Date();
+  const twelveMonthsAgo = new Date(now);
+  twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+  const startMs = twelveMonthsAgo.getTime();
+  const rangeMs = now.getTime() - startMs;
+
+  for (let i = 0; i < count; i++) {
+    // 55% in, 45% out
+    const direction = Math.random() < 0.55 ? "in" : "out";
+    const descriptions = direction === "in" ? IN_DESCRIPTIONS : OUT_DESCRIPTIONS;
+    const description = rand(descriptions);
+
+    // Random amount: in = 50-5000, out = 20-8000
+    const amount =
+      direction === "in"
+        ? parseFloat((randInt(5000, 500000) / 100).toFixed(2))
+        : parseFloat((randInt(2000, 800000) / 100).toFixed(2));
+
+    // Random date in last 12 months
+    const txDate = new Date(startMs + Math.random() * rangeMs);
+    const transactionDate = txDate.toISOString().split("T")[0];
+
+    // Reference: 60% have one
+    const reference =
+      Math.random() < 0.6
+        ? `${rand(REFERENCE_PREFIXES)}${randInt(100000, 999999)}`
+        : null;
+
+    // Subject: 70% linked, 30% no subject
+    const subjectId =
+      subjectIds.length > 0 && Math.random() < 0.7
+        ? rand(subjectIds)
+        : null;
+
+    const { error } = await admin.from("transactions").insert({
+      organization_id: organizationId,
+      collection_resource_id: rand(resources).id,
+      subject_id: subjectId,
+      direction,
+      amount,
+      transaction_date: transactionDate,
+      description,
+      reference,
+      created_by: currentUser.user.id,
+    });
+
+    if (!error) created++;
+  }
+
+  return { success: true, created };
+}

@@ -16,10 +16,13 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import {
   Download,
+  Upload,
   ArrowLeftRight,
   Inbox,
   Pencil,
   Plus,
+  RotateCcw,
+  Save,
   Star,
   Trash2,
   Group,
@@ -32,6 +35,84 @@ import { useTranslation } from "@/lib/i18n/context";
 import { getAgGridLocale } from "@/lib/i18n/ag-grid";
 
 ModuleRegistry.registerModules([AllCommunityModule]);
+
+// --- Import/Export dropdown menu ---
+function ImportExportMenu({
+  onExport,
+  importItems,
+  disabled,
+  t,
+}: {
+  onExport: () => void;
+  importItems?: DataGridImportItem[];
+  disabled: boolean;
+  t: (key: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  return (
+    <div className="relative" ref={ref}>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={disabled && (!importItems || importItems.length === 0)}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <ArrowLeftRight className="h-4 w-4 mr-1" />
+        {t("common.importExport")}
+      </Button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-50 min-w-[200px] rounded-md border bg-popover shadow-md py-1">
+          {/* Export section */}
+          <div className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+            {t("common.exports")}
+          </div>
+          <button
+            type="button"
+            className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left disabled:opacity-50"
+            disabled={disabled}
+            onClick={() => { onExport(); setOpen(false); }}
+          >
+            <span className="flex items-center justify-center w-5 h-5 rounded bg-green-600 text-white">
+              <Download className="h-3 w-3" />
+            </span>
+            Excel
+          </button>
+          {/* Import section */}
+          {importItems && importItems.length > 0 && (
+            <>
+              <div className="border-t my-1" />
+              <div className="px-3 py-1 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                {t("common.imports")}
+              </div>
+              {importItems.map((item) => (
+                <button
+                  key={item.label}
+                  type="button"
+                  className="flex items-center gap-2 w-full px-3 py-2 text-sm hover:bg-muted transition-colors text-left"
+                  onClick={() => { item.onClick(); setOpen(false); }}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {item.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // --- Themes ---
 const baseThemeParams = {
@@ -93,6 +174,20 @@ function saveLayouts(gridId: string, layouts: GridLayout[]) {
 }
 
 // --- Component ---
+export interface DataGridImportItem {
+  label: string;
+  onClick: () => void;
+}
+
+export interface DataGridCustomAction<T> {
+  label: string;
+  icon?: ReactNode;
+  variant?: "default" | "outline" | "ghost" | "destructive";
+  onClick: (selectedRows: T[]) => void;
+  requiresSelection?: boolean;
+  disabled?: boolean;
+}
+
 interface DataGridProps<T> {
   rowData: T[];
   columnDefs: ColDef<T>[];
@@ -106,6 +201,8 @@ interface DataGridProps<T> {
   onCreate?: () => void;
   onEdit?: (data: T) => void;
   onDelete?: (data: T[]) => void;
+  importItems?: DataGridImportItem[];
+  customActions?: DataGridCustomAction<T>[];
 }
 
 export function DataGrid<T>({
@@ -121,6 +218,8 @@ export function DataGrid<T>({
   onCreate,
   onEdit,
   onDelete,
+  importItems,
+  customActions,
 }: DataGridProps<T>) {
   const gridRef = useRef<AgGridReact<T>>(null);
   const gridApiRef = useRef<GridApi<T> | null>(null);
@@ -441,12 +540,23 @@ export function DataGrid<T>({
     };
   }, [onEdit, t]);
 
+  // --- Pagination (needed before selection logic) ---
+  const effectivePagination = pagination && !groupByColumn;
+
   // --- Selection for delete ---
   const [selectedRows, setSelectedRows] = useState<T[]>([]);
+  const [wantAllPages, setWantAllPages] = useState(false);
+
+  // All real data rows (excluding group headers)
+  const allDataRows = useMemo(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return rowData.filter((r) => !(r as any).__isGroupRow);
+  }, [rowData]);
 
   // Reset selection when data changes (e.g. after delete)
   useEffect(() => {
     setSelectedRows([]);
+    setWantAllPages(false);
     if (gridApiRef.current) {
       gridApiRef.current.deselectAll();
     }
@@ -457,7 +567,31 @@ export function DataGrid<T>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const selected = gridApiRef.current.getSelectedRows().filter((r) => !(r as any).__isGroupRow);
     setSelectedRows(selected);
-  }, [onDelete]);
+    // If user manually changes selection, exit "all pages" mode
+    if (wantAllPages) setWantAllPages(false);
+  }, [onDelete, wantAllPages]);
+
+  // Show the "select all" banner when user selected all rows on the current page
+  // but there are more rows on other pages
+  const showSelectAllBanner = useMemo(() => {
+    if (!onDelete || !effectivePagination || selectedRows.length === 0 || wantAllPages) return false;
+    // Check if selected count >= page size AND total rows > selected
+    const pageSize = paginationPageSize;
+    return selectedRows.length >= pageSize && allDataRows.length > selectedRows.length;
+  }, [onDelete, effectivePagination, selectedRows.length, paginationPageSize, allDataRows.length, wantAllPages]);
+
+  const handleSelectAllPages = useCallback(() => {
+    setWantAllPages(true);
+  }, []);
+
+  const handleClearSelection = useCallback(() => {
+    setWantAllPages(false);
+    setSelectedRows([]);
+    if (gridApiRef.current) gridApiRef.current.deselectAll();
+  }, []);
+
+  // The rows that will actually be passed to onDelete
+  const effectiveSelectedRows = wantAllPages ? allDataRows : selectedRows;
 
   // --- Double click to edit ---
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -474,9 +608,10 @@ export function DataGrid<T>({
         // Don't trigger when typing in inputs/textareas
         const tag = (e.target as HTMLElement)?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
-        if (selectedRows.length > 0) {
+        const rows = wantAllPages ? allDataRows : selectedRows;
+        if (rows.length > 0) {
           e.preventDefault();
-          onDelete(selectedRows);
+          onDelete(rows);
         }
       }
     };
@@ -621,7 +756,22 @@ export function DataGrid<T>({
         forceTextCols.add(ci);
       }
     });
-    // Format date cells + force text cells
+    // Detect currency columns: columns where raw is number and display contains currency symbol
+    // Check multiple rows because some columns (e.g. "In" amount) may be null on certain rows
+    const currencyCols = new Set<number>();
+    if (items.length > 0) {
+      cols.forEach((col, ci) => {
+        for (const item of items) {
+          const raw = getExportRaw(item, col);
+          const display = String(getExportDisplay(item, col) ?? "");
+          if (typeof raw === "number" && /[€$£¥]/.test(display)) {
+            currencyCols.add(ci);
+            break;
+          }
+        }
+      });
+    }
+    // Format date cells, currency cells, force text cells
     for (let R = 1; R <= range.e.r; R++) {
       for (let C = range.s.c; C <= range.e.c; C++) {
         const addr = XLSX.utils.encode_cell({ r: R, c: C });
@@ -633,6 +783,9 @@ export function DataGrid<T>({
         } else if (forceTextCols.has(C)) {
           cell.t = "s";
           cell.v = String(cell.v ?? "");
+        } else if (currencyCols.has(C) && typeof cell.v === "number") {
+          cell.t = "n";
+          cell.z = '#,##0.00 "€"';
         }
       }
     }
@@ -699,8 +852,7 @@ export function DataGrid<T>({
     [domLayout, height]
   );
 
-  // --- Fix 4: Disable pagination when grouping ---
-  const effectivePagination = pagination && !groupByColumn;
+  // (effectivePagination defined earlier, before selection logic)
 
   // --- Fix 5: Options menu (combines Columns, Group, Layout) ---
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
@@ -725,10 +877,6 @@ export function DataGrid<T>({
             </Button>
           )}
           <div className="flex-1" />
-          <Button variant="outline" size="sm" disabled={rowData.length === 0} className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" onClick={handleExport}>
-            <Download className="h-4 w-4 mr-1" />
-            {t("common.exportExcel")}
-          </Button>
         </div>
         {rowData.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
@@ -761,12 +909,51 @@ export function DataGrid<T>({
             <Button
               variant="destructive"
               size="sm"
-              disabled={selectedRows.length === 0}
-              onClick={() => onDelete(selectedRows)}
+              disabled={effectiveSelectedRows.length === 0}
+              onClick={() => onDelete(effectiveSelectedRows)}
             >
               <Trash2 className="h-4 w-4 mr-1" />
-              {t("common.delete")} {selectedRows.length > 0 && `(${selectedRows.length})`}
+              {t("common.delete")} {effectiveSelectedRows.length > 0 && `(${effectiveSelectedRows.length})`}
             </Button>
+          )}
+          {customActions?.map((action, idx) => (
+            <Button
+              key={idx}
+              variant={(action.variant as "default" | "outline" | "ghost" | "destructive") ?? "outline"}
+              size="sm"
+              disabled={action.disabled || (action.requiresSelection !== false && effectiveSelectedRows.length === 0)}
+              onClick={() => action.onClick(effectiveSelectedRows)}
+            >
+              {action.icon}
+              {action.label} {action.requiresSelection !== false && effectiveSelectedRows.length > 0 && `(${effectiveSelectedRows.length})`}
+            </Button>
+          ))}
+          {/* Gmail-style "select all pages" inline */}
+          {showSelectAllBanner && (
+            <span className="text-xs text-muted-foreground">
+              {t("common.selectedOnPage", { count: String(selectedRows.length) })}{" "}
+              <button
+                type="button"
+                className="text-primary font-medium hover:underline cursor-pointer"
+                onClick={handleSelectAllPages}
+              >
+                {t("common.selectAll", { count: String(allDataRows.length) })}
+              </button>
+            </span>
+          )}
+          {wantAllPages && (
+            <span className="text-xs">
+              <span className="text-primary font-medium">
+                {t("common.allSelected", { count: String(allDataRows.length) })}
+              </span>{" "}
+              <button
+                type="button"
+                className="text-muted-foreground hover:underline cursor-pointer"
+                onClick={handleClearSelection}
+              >
+                {t("common.clearSelection")}
+              </button>
+            </span>
           )}
         </div>
 
@@ -931,6 +1118,7 @@ export function DataGrid<T>({
                           className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer w-full text-left"
                           onClick={() => setShowSaveInput(true)}
                         >
+                          <Save className="h-3.5 w-3.5 text-muted-foreground" />
                           {t("common.saveLayout")}
                         </button>
                       )}
@@ -940,6 +1128,7 @@ export function DataGrid<T>({
                         className="flex items-center gap-2 px-2 py-1.5 text-sm rounded hover:bg-muted cursor-pointer w-full text-left"
                         onClick={handleResetLayout}
                       >
+                        <RotateCcw className="h-3.5 w-3.5 text-muted-foreground" />
                         {t("common.resetLayout")}
                       </button>
                     </>
@@ -950,14 +1139,15 @@ export function DataGrid<T>({
           )}
         </div>
 
-        {/* Export */}
-        <Button variant="outline" size="sm" disabled={rowData.length === 0} className="border-green-600 text-green-600 hover:bg-green-600 hover:text-white" onClick={handleExport}>
-          <Download className="h-4 w-4 mr-1" />
-          {t("common.exportExcel")}
-        </Button>
+        {/* Import/Export dropdown */}
+        <ImportExportMenu
+          onExport={handleExport}
+          importItems={importItems}
+          disabled={rowData.length === 0}
+          t={t}
+        />
       </div>
 
-      {/* Grid */}
       {rowData.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center min-h-[200px] gap-3">
           <Inbox className="h-12 w-12 text-muted-foreground/30" />
@@ -980,7 +1170,7 @@ export function DataGrid<T>({
             onFilterChanged={onFilterChanged}
             onRowDoubleClicked={onEdit ? onRowDoubleClicked : undefined}
             onSelectionChanged={onDelete ? onSelectionChanged : undefined}
-            rowSelection={onDelete ? { mode: "multiRow" } : undefined}
+            rowSelection={onDelete ? { mode: "multiRow", selectAll: "currentPage" } : undefined}
             animateRows={true}
             pagination={effectivePagination}
             paginationPageSize={paginationPageSize}

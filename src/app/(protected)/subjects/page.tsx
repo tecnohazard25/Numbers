@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  deleteSubjectAction,
+  deleteSubjectsAction,
   toggleSubjectAction,
   mergeSubjectsAction,
 } from "@/app/actions/subjects";
@@ -106,7 +106,7 @@ export default function SubjectsPage() {
 
   // Delete confirmation
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<SubjectWithDetails | null>(null);
+  const [deleteTargets, setDeleteTargets] = useState<SubjectWithDetails[]>([]);
 
   // Similar subjects
   interface SimilarGroup {
@@ -180,16 +180,17 @@ export default function SubjectsPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteTarget) return;
-    const result = await deleteSubjectAction(deleteTarget.id);
+    if (deleteTargets.length === 0) return;
+    const ids = deleteTargets.map((s) => s.id);
+    const result = await deleteSubjectsAction(ids);
     if (result.error) {
       toast.error(result.error);
     } else {
       toast.success(t("subjects.deleted"));
-      setDeleteDialogOpen(false);
-      setDeleteTarget(null);
-      loadData();
     }
+    setDeleteDialogOpen(false);
+    setDeleteTargets([]);
+    loadData();
   };
 
   const openNewForm = () => {
@@ -524,7 +525,7 @@ export default function SubjectsPage() {
         onCreate={canWrite ? openNewForm : undefined}
         onEdit={canWrite ? (s) => openEditForm(s) : undefined}
         onDelete={canWrite ? (selected) => {
-          setDeleteTarget(selected[0]);
+          setDeleteTargets(selected);
           setDeleteDialogOpen(true);
         } : undefined}
         exportFileName="soggetti"
@@ -597,7 +598,7 @@ export default function SubjectsPage() {
                   variant="ghost"
                   size="icon-sm"
                   onClick={() => {
-                    setDeleteTarget(subject);
+                    setDeleteTargets([subject]);
                     setDeleteDialogOpen(true);
                   }}
                 >
@@ -658,7 +659,7 @@ export default function SubjectsPage() {
           <p className="text-sm text-muted-foreground">
             {t("subjects.confirmDeleteDesc")}{" "}
             <strong>
-              {deleteTarget ? getSubjectName(deleteTarget) : ""}
+              {deleteTargets.length === 1 ? getSubjectName(deleteTargets[0]) : `${deleteTargets.length} soggetti`}
             </strong>
             ? {t("subjects.cannotBeUndone")}
           </p>

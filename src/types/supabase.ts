@@ -101,6 +101,7 @@ export type Tag = {
   organization_id: string;
   name: string;
   color: string;
+  is_active: boolean;
 };
 
 export type SubjectTag = {
@@ -158,4 +159,125 @@ export type PaymentType = {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+};
+
+// --- Phase 5: Transactions ---
+
+export type TransactionDirection = "in" | "out";
+
+export type Transaction = {
+  id: string;
+  organization_id: string;
+  collection_resource_id: string;
+  subject_id: string | null;
+  direction: TransactionDirection;
+  amount: number;
+  transaction_date: string;
+  description: string;
+  reference: string | null;
+  is_balance_row: boolean;
+  reclassification_node_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TransactionAttachment = {
+  id: string;
+  transaction_id: string;
+  file_name: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_by: string | null;
+  uploaded_at: string;
+};
+
+export type TransactionWithDetails = Transaction & {
+  collection_resources: CollectionResource;
+  subjects: { id: string; first_name: string | null; last_name: string | null; business_name: string | null; type: SubjectType } | null;
+  transaction_attachments: TransactionAttachment[];
+};
+
+// --- Phase 7: Import ---
+
+export type GeminiMovement = {
+  transaction_date: string;
+  direction: TransactionDirection;
+  amount: number;
+  description: string;
+  reference: string | null;
+  suggested_node_full_code: string | null;
+};
+
+export type GeminiResponse = {
+  bank_statement: boolean;
+  document_totals: {
+    total_in: number;
+    total_out: number;
+  } | null;
+  movements: GeminiMovement[];
+};
+
+export type ImportPreviewMovement = GeminiMovement & {
+  status: "new" | "updated";
+  existing_id?: string;
+  resolved_node_id?: string | null;
+};
+
+export type ImportPreviewResult = {
+  movements: ImportPreviewMovement[];
+  notFoundInFile: {
+    id: string;
+    transaction_date: string;
+    amount: number;
+    direction: TransactionDirection;
+    description: string;
+  }[];
+  bankStatement: boolean;
+  documentTotals: { totalIn: number; totalOut: number } | null;
+  calculatedTotals: { totalIn: number; totalOut: number };
+  totalsMatch: boolean;
+};
+
+// --- Phase 6: Reclassification ---
+
+export type ReclassificationNodeSign = "positive" | "negative";
+
+export type ReclassificationTemplate = {
+  id: string;
+  organization_id: string | null;
+  name: string;
+  description: string | null;
+  is_template: boolean;
+  is_active: boolean;
+  is_base: boolean;
+  cloned_from_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReclassificationNode = {
+  id: string;
+  template_id: string;
+  parent_id: string | null;
+  code: string;
+  full_code: string;
+  name: string;
+  sign: ReclassificationNodeSign;
+  order_index: number;
+  is_total: boolean;
+  formula: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ReclassificationNodeRef = {
+  total_node_id: string;
+  ref_node_id: string;
+};
+
+export type ReclassificationNodeWithChildren = ReclassificationNode & {
+  children: ReclassificationNodeWithChildren[];
 };

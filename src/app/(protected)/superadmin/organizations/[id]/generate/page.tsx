@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { generateRandomSubjectsAction } from "@/app/actions/generate-data";
+import {
+  generateRandomSubjectsAction,
+  generateRandomTransactionsAction,
+} from "@/app/actions/generate-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,7 +17,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
-import { ArrowLeft, Database, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Database, Loader2 } from "lucide-react";
 
 export default function GenerateDataPage() {
   const params = useParams();
@@ -25,6 +28,11 @@ export default function GenerateDataPage() {
   const [count, setCount] = useState(10);
   const [isGenerating, setIsGenerating] = useState(false);
   const [result, setResult] = useState<{ created: number } | null>(null);
+
+  const [txCount, setTxCount] = useState(50);
+  const [isTxGenerating, setIsTxGenerating] = useState(false);
+  const [txResult, setTxResult] = useState<{ created: number } | null>(null);
+
   const [authorized, setAuthorized] = useState(false);
 
   useEffect(() => {
@@ -138,6 +146,79 @@ export default function GenerateDataPage() {
           {result && (
             <div className="rounded-md bg-green-500/10 text-green-400 p-3 text-sm">
               Creati {result.created} soggetti con successo.
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <ArrowLeftRight className="h-5 w-5" />
+            Movimenti random
+          </CardTitle>
+          <CardDescription>
+            Genera movimenti casuali (entrate e uscite) distribuiti negli ultimi
+            12 mesi. Richiede almeno una risorsa di incasso attiva.
+            I movimenti vengono associati casualmente alle risorse di incasso e ai soggetti esistenti.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="txCount">Quanti movimenti generare?</Label>
+            <Input
+              id="txCount"
+              type="number"
+              min={1}
+              max={1000}
+              value={txCount === 0 ? "" : txCount}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === "") {
+                  setTxCount(0);
+                } else {
+                  const n = parseInt(val);
+                  if (!isNaN(n)) setTxCount(Math.min(n, 1000));
+                }
+              }}
+            />
+            <p className="text-xs text-muted-foreground">
+              Massimo 1000. Circa 55% entrate, 45% uscite. Importi tra €20 e €8.000.
+            </p>
+          </div>
+
+          <Button
+            onClick={async () => {
+              setIsTxGenerating(true);
+              setTxResult(null);
+              const res = await generateRandomTransactionsAction(orgId, txCount);
+              if (res.error) {
+                toast.error(res.error);
+              } else {
+                setTxResult({ created: res.created ?? 0 });
+                toast.success(`${res.created} movimenti creati con successo`);
+              }
+              setIsTxGenerating(false);
+            }}
+            disabled={isTxGenerating || txCount < 1 || txCount > 1000}
+            className="w-full"
+          >
+            {isTxGenerating ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Generazione in corso...
+              </>
+            ) : (
+              <>
+                <ArrowLeftRight className="h-4 w-4 mr-2" />
+                Genera {txCount} movimenti
+              </>
+            )}
+          </Button>
+
+          {txResult && (
+            <div className="rounded-md bg-green-500/10 text-green-400 p-3 text-sm">
+              Creati {txResult.created} movimenti con successo.
             </div>
           )}
         </CardContent>

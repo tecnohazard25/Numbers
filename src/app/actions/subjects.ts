@@ -384,6 +384,40 @@ export async function deleteSubjectAction(subjectId: string) {
   return { success: true };
 }
 
+export async function deleteSubjectsAction(subjectIds: string[]) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  const { roles, profile } = currentUser;
+  if (!roles.includes("superadmin") && !roles.includes("user_manager")) {
+    return { error: "Non autorizzato" };
+  }
+
+  if (subjectIds.length === 0) return { error: "Nessun soggetto selezionato" };
+
+  const admin = createAdminClient();
+
+  const { data: existing } = await admin
+    .from("subjects")
+    .select("id, organization_id")
+    .in("id", subjectIds);
+
+  const validIds = (existing ?? [])
+    .filter((s) => s.organization_id === profile.organization_id)
+    .map((s) => s.id);
+
+  if (validIds.length === 0) return { error: "Soggetti non trovati" };
+
+  const { error } = await admin.from("subjects").delete().in("id", validIds);
+
+  if (error) {
+    return { error: "Errore nell'eliminazione" };
+  }
+
+  revalidatePath("/subjects");
+  return { success: true, deleted: validIds.length };
+}
+
 export async function toggleSubjectAction(subjectId: string, isActive: boolean) {
   const currentUser = await getCurrentUser();
   if (!currentUser) return { error: "Non autorizzato" };

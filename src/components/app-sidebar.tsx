@@ -1,10 +1,12 @@
 "use client";
 
 import {
+  ArrowLeftRight,
   Building2,
   CircleUserRound,
   Contact2,
   EyeOff,
+  FileSpreadsheet,
   Settings,
   Users,
   LayoutDashboard,
@@ -41,10 +43,11 @@ type NavItem = {
 interface AppSidebarProps {
   roles: string[];
   userName: string;
+  organizationName?: string;
   impersonating?: ImpersonationInfo | null;
 }
 
-export function AppSidebar({ roles, userName, impersonating }: AppSidebarProps) {
+export function AppSidebar({ roles, userName, organizationName, impersonating }: AppSidebarProps) {
   const pathname = usePathname();
   const { t } = useTranslation();
   const [isRestoring, setIsRestoring] = useState(false);
@@ -80,10 +83,12 @@ export function AppSidebar({ roles, userName, impersonating }: AppSidebarProps) 
 
   const anagraficaItems: NavItem[] = [
     { title: t("sidebar.subjects"), url: "/subjects", icon: Contact2 },
+    { title: t("sidebar.transactions"), url: "/transactions", icon: ArrowLeftRight },
   ];
 
   const settingsItems: NavItem[] = [
     { title: t("sidebar.settings"), url: "/settings", icon: Settings },
+    { title: t("sidebar.reclassification"), url: "/settings/reclassification", icon: FileSpreadsheet },
   ];
 
   const isSuperadmin = roles.includes("superadmin");
@@ -99,6 +104,12 @@ export function AppSidebar({ roles, userName, impersonating }: AppSidebarProps) 
           <Shield className="h-6 w-6" />
           <span className="font-semibold text-lg">Numbers</span>
         </div>
+        {organizationName && !isSuperadmin && (
+          <div className="flex items-center gap-2 mt-1">
+            <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+            <span className="text-xs text-muted-foreground truncate">{organizationName}</span>
+          </div>
+        )}
       </SidebarHeader>
       <SidebarContent>
         {isSuperadmin && (
@@ -161,16 +172,20 @@ export function AppSidebar({ roles, userName, impersonating }: AppSidebarProps) 
             </SidebarGroupContent>
           </SidebarGroup>
         )}
-        {roles.includes("accountant") && (
+        {(roles.includes("accountant") || isSuperadmin) && (
           <SidebarGroup>
             <SidebarGroupLabel>{t("sidebar.configuration")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {settingsItems.map((item) => (
+                {settingsItems.filter((item) => !isSuperadmin || item.url !== "/settings").map((item) => (
                   <SidebarMenuItem key={item.url}>
                     <SidebarMenuButton
                       render={<Link href={item.url} />}
-                      isActive={pathname.startsWith(item.url)}
+                      isActive={
+                        item.url === "/settings"
+                          ? pathname === "/settings"
+                          : pathname.startsWith(item.url)
+                      }
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
