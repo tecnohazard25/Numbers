@@ -413,6 +413,7 @@ export default function TemplateEditorPage() {
                   <NodeDetailForm
                     node={selectedNode}
                     allNodes={nodes}
+                    baseNodes={baseNodes}
                     nodeRefs={nodeRefs}
                     isAccountant={canEdit}
                     onNodeUpdated={handleNodeUpdated}

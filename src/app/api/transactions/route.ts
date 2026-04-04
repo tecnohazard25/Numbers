@@ -1,12 +1,23 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(request: Request) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return NextResponse.json({ transactions: [] });
+  }
+
   const { searchParams } = new URL(request.url);
   const orgId = searchParams.get("orgId");
   const collectionResourceId = searchParams.get("collectionResourceId");
 
   if (!orgId || !collectionResourceId) {
+    return NextResponse.json({ transactions: [] });
+  }
+
+  // Verify user belongs to the requested org
+  if (currentUser.profile.organization_id !== orgId) {
     return NextResponse.json({ transactions: [] });
   }
 

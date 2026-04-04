@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getCurrentUser } from "@/lib/auth";
 
 export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { id } = await params;
   const admin = createAdminClient();
 
@@ -18,6 +24,11 @@ export async function GET(
 
   if (error || !transaction) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  // Verify user belongs to the transaction's org
+  if (transaction.organization_id !== currentUser.profile.organization_id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // Resolve reclassification node

@@ -187,10 +187,13 @@ export async function classifyTransactionAction(
 
   const chart = leafNodes.map((n) => `- ${n.full_code}: ${n.name} [${n.sign === "positive" ? "RICAVO" : "COSTO"}]`).join("\n");
 
+  // Sanitize description to prevent prompt injection
+  const safeDesc = description.replace(/[{}\[\]`]/g, "").substring(0, 500);
+
   const prompt = `Sei un assistente contabile. Dato il seguente movimento bancario, suggerisci il codice del piano dei conti più appropriato.
 
 Movimento:
-- Descrizione: ${description}
+- Descrizione: ${safeDesc}
 - Direzione: ${direction === "in" ? "ENTRATA" : "USCITA"}
 - Importo: ${amount}€
 
@@ -247,7 +250,7 @@ export async function classifyTransactionsBatchAction(
   const chart = leafNodes.map((n) => `- ${n.full_code}: ${n.name} [${n.sign === "positive" ? "RICAVO" : "COSTO"}]`).join("\n");
 
   const movementsList = movements.map((m, i) =>
-    `${i + 1}. [ID: ${m.id}] "${m.description}" | ${m.direction === "in" ? "ENTRATA" : "USCITA"} | ${m.amount}€`
+    `${i + 1}. [ID: ${m.id}] "${m.description.replace(/[{}\[\]`]/g, "").substring(0, 500)}" | ${m.direction === "in" ? "ENTRATA" : "USCITA"} | ${m.amount}€`
   ).join("\n");
 
   const prompt = `Sei un assistente contabile. Classifica ciascun movimento nel piano dei conti.

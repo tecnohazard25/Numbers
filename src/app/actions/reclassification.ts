@@ -159,20 +159,21 @@ export async function setBaseTemplateAction(templateId: string) {
   }
   if (existing.is_template) return { error: "Il template predefinito non può essere impostato come base" }; // system template is never base
 
-  // Unset current base
-  await admin
-    .from("reclassification_templates")
-    .update({ is_base: false })
-    .eq("organization_id", organizationId)
-    .eq("is_base", true);
-
-  // Set new base
+  // Set new base first, then unset others (safer order — worst case: two bases temporarily, never zero)
   const { error } = await admin
     .from("reclassification_templates")
     .update({ is_base: true })
     .eq("id", templateId);
 
   if (error) return { error: `Errore: ${error.message}` };
+
+  // Unset all other bases in this org
+  await admin
+    .from("reclassification_templates")
+    .update({ is_base: false })
+    .eq("organization_id", organizationId)
+    .eq("is_base", true)
+    .neq("id", templateId);
 
   revalidatePath("/settings/reclassification");
   return { success: true };
@@ -595,30 +596,40 @@ export async function reorderNodesAction(orderedNodeIds: string[]) {
 
   const admin = createAdminClient();
 
-  // Verify first node belongs to user's org
-  const { data: firstNode } = await admin
+  // Verify ALL nodes belong to user's org and same template
+  const { data: allNodes } = await admin
     .from("reclassification_nodes")
-    .select("template_id, reclassification_templates(organization_id, is_template)")
-    .eq("id", orderedNodeIds[0])
+    .select("id, template_id")
+    .in("id", orderedNodeIds);
+
+  if (!allNodes || allNodes.length !== orderedNodeIds.length) {
+    return { error: "Nodi non trovati" };
+  }
+
+  const templateIds = new Set(allNodes.map((n) => n.template_id));
+  if (templateIds.size !== 1) return { error: "I nodi devono appartenere allo stesso template" };
+
+  const templateId = allNodes[0].template_id;
+  const { data: tmplData } = await admin
+    .from("reclassification_templates")
+    .select("organization_id, is_template")
+    .eq("id", templateId)
     .single();
 
-  if (!firstNode) return { error: "Nodo non trovato" };
-
-  const tmpl = firstNode.reclassification_templates as unknown as {
-    organization_id: string;
-    is_template: boolean;
-  };
-  if (tmpl.organization_id !== currentUser.profile.organization_id) {
+  if (!tmplData || tmplData.organization_id !== currentUser.profile.organization_id) {
     return { error: "Non autorizzato" };
   }
-  if (tmpl.is_template && !isSuperadmin(currentUser.roles)) return { error: "Il template predefinito non può essere modificato" };
+  if (tmplData.is_template && !isSuperadmin(currentUser.roles)) return { error: "Il template predefinito non può essere modificato" };
 
-  // Update order_index for each node
+  // Bulk update order_index — use the validated node IDs only
+  const validIds = new Set(allNodes.map((n) => n.id));
   for (let i = 0; i < orderedNodeIds.length; i++) {
+    if (!validIds.has(orderedNodeIds[i])) continue;
     await admin
       .from("reclassification_nodes")
       .update({ order_index: i })
-      .eq("id", orderedNodeIds[i]);
+      .eq("id", orderedNodeIds[i])
+      .eq("template_id", templateId);
   }
 
   revalidatePath("/settings/reclassification");

@@ -252,9 +252,10 @@ export async function confirmImportAction(
 
   // Update existing movements (must be individual updates due to different IDs)
   let updated = 0;
+  let updateErrors = 0;
   const updateMovements = movements.filter((m) => m.status === "updated" && m.existing_id);
   for (const m of updateMovements) {
-    await admin
+    const { error: updateError } = await admin
       .from("transactions")
       .update({
         description: m.description,
@@ -262,7 +263,15 @@ export async function confirmImportAction(
         reclassification_node_id: m.resolved_node_id || null,
       })
       .eq("id", m.existing_id!);
-    updated++;
+    if (updateError) {
+      updateErrors++;
+      console.error(`[Import] Update error for ${m.existing_id}: ${updateError.message}`);
+    } else {
+      updated++;
+    }
+  }
+  if (updateErrors > 0) {
+    console.warn(`[Import] ${updateErrors} update errors out of ${updateMovements.length}`);
   }
 
   revalidatePath("/transactions");
