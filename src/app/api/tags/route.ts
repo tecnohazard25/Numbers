@@ -11,11 +11,19 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
-  const { data: tags, error } = await admin
+  const includeDeactivated = searchParams.get("includeDeactivated") === "true";
+
+  let query = admin
     .from("tags")
     .select("*, subject_tags(count)")
     .eq("organization_id", orgId)
     .order("name");
+
+  if (!includeDeactivated) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data: tags, error } = await query;
 
   if (error) {
     console.error("Error fetching tags:", error);

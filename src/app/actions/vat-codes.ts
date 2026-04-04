@@ -165,6 +165,34 @@ export async function deleteVatCodeAction(vatCodeId: string) {
   return { success: true };
 }
 
+export async function toggleVatCodeActiveAction(vatCodeId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+  if (!canManageVatCodes(currentUser.roles)) return { error: "Non autorizzato" };
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("vat_codes")
+    .select("organization_id, is_active")
+    .eq("id", vatCodeId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Codice IVA non trovato" };
+  }
+
+  const newActive = !existing.is_active;
+  const { error } = await admin
+    .from("vat_codes")
+    .update({ is_active: newActive })
+    .eq("id", vatCodeId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  return { success: true, is_active: newActive };
+}
+
 export async function seedVatCodesForCurrentOrg() {
   const currentUser = await getCurrentUser();
   if (!currentUser) return { error: "Non autorizzato" };

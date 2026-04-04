@@ -11,11 +11,19 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
-  const { data: vatCodes, error } = await admin
+  const includeDeactivated = searchParams.get("includeDeactivated") === "true";
+
+  let query = admin
     .from("vat_codes")
     .select("*")
     .eq("organization_id", orgId)
     .order("code");
+
+  if (!includeDeactivated) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data: vatCodes, error } = await query;
 
   if (error) {
     console.error("Error fetching VAT codes:", error);

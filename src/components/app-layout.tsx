@@ -13,13 +13,14 @@ interface AppLayoutProps {
   children: React.ReactNode;
   roles: string[];
   userName: string;
+  organizationName?: string;
   impersonating?: ImpersonationInfo | null;
 }
 
-export function AppLayout({ children, roles, userName, impersonating }: AppLayoutProps) {
+export function AppLayout({ children, roles, userName, organizationName, impersonating }: AppLayoutProps) {
   return (
     <SidebarProvider>
-      <AppSidebar roles={roles} userName={userName} impersonating={impersonating} />
+      <AppSidebar roles={roles} userName={userName} organizationName={organizationName} impersonating={impersonating} />
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         <div className="flex items-center p-4 border-b md:hidden">
           <SidebarTrigger />

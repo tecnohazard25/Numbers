@@ -168,6 +168,34 @@ export async function deleteCollectionResourceAction(resourceId: string) {
   return { success: true };
 }
 
+export async function toggleCollectionResourceActiveAction(resourceId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+  if (!canManageCollectionResources(currentUser.roles)) return { error: "Non autorizzato" };
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("collection_resources")
+    .select("organization_id, is_active")
+    .eq("id", resourceId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Risorsa non trovata" };
+  }
+
+  const newActive = !existing.is_active;
+  const { error } = await admin
+    .from("collection_resources")
+    .update({ is_active: newActive })
+    .eq("id", resourceId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/settings");
+  return { success: true, is_active: newActive };
+}
+
 const DEFAULT_COLLECTION_RESOURCES: Omit<CollectionResourceInput, "iban">[] = [
   { name: "Cassa Contanti", code: "CASSA", type: "cash" },
   { name: "Conto Corrente Bancario", code: "CC01", type: "bank_account" },

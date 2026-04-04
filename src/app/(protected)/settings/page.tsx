@@ -74,7 +74,7 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-auto">
         {activeTab === "vat-codes" && <VatCodesSection orgId={orgId} />}
         {activeTab === "tags" && <TagsSection orgId={orgId} />}
         {activeTab === "collection-resources" && <CollectionResourcesSection orgId={orgId} />}

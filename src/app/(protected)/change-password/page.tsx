@@ -153,7 +153,7 @@ export default function ChangePasswordPage() {
                   key={opt.value}
                   type="button"
                   onClick={() => setTheme(opt.value)}
-                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors ${
+                  className={`flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors cursor-pointer ${
                     isActive
                       ? "border-primary bg-primary/5"
                       : "border-border hover:border-muted-foreground/30"

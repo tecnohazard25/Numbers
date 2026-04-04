@@ -116,3 +116,36 @@ export async function deleteTagAction(tagId: string) {
   revalidatePath("/settings");
   return { success: true };
 }
+
+export async function toggleTagActiveAction(tagId: string) {
+  const currentUser = await getCurrentUser();
+  if (!currentUser) return { error: "Non autorizzato" };
+
+  const { roles } = currentUser;
+  if (!roles.includes("superadmin") && !roles.includes("user_manager")) {
+    return { error: "Non autorizzato" };
+  }
+
+  const admin = createAdminClient();
+  const { data: existing } = await admin
+    .from("tags")
+    .select("organization_id, is_active")
+    .eq("id", tagId)
+    .single();
+
+  if (!existing || existing.organization_id !== currentUser.profile.organization_id) {
+    return { error: "Tag non trovato" };
+  }
+
+  const newActive = !existing.is_active;
+  const { error } = await admin
+    .from("tags")
+    .update({ is_active: newActive })
+    .eq("id", tagId);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/subjects");
+  revalidatePath("/settings");
+  return { success: true, is_active: newActive };
+}

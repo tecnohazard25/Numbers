@@ -19,11 +19,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Landmark, Pencil, Save, Trash2, X, Check, AlertCircle, Loader2 } from "lucide-react";
+import { Landmark, Pencil, Save, Trash2, X, Check, AlertCircle, Loader2, Eye, EyeOff, Power, PowerOff } from "lucide-react";
 import {
   createCollectionResourceAction,
   updateCollectionResourceAction,
   deleteCollectionResourceAction,
+  toggleCollectionResourceActiveAction,
   seedCollectionResourcesAction,
 } from "@/app/actions/collection-resources";
 import { validateIbanAction } from "@/app/actions/iban";
@@ -77,12 +78,17 @@ export function CollectionResourcesSection({ orgId }: Props) {
   // Delete state
   const [deleteTarget, setDeleteTarget] = useState<CollectionResource | null>(null);
 
+  // Filter state
+  const [showDeactivated, setShowDeactivated] = useState(false);
+
   const loadData = useCallback(async () => {
-    const res = await fetch(`/api/collection-resources?orgId=${orgId}`);
+    const params = new URLSearchParams({ orgId });
+    if (showDeactivated) params.set("includeDeactivated", "true");
+    const res = await fetch(`/api/collection-resources?${params}`);
     const data = await res.json();
     setResources(data.resources ?? []);
     setLoading(false);
-  }, [orgId]);
+  }, [orgId, showDeactivated]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -148,6 +154,19 @@ export function CollectionResourcesSection({ orgId }: Props) {
     setIsSubmitting(false);
   }
 
+  async function handleToggleActive(res: CollectionResource) {
+    setIsSubmitting(true);
+    const result = await toggleCollectionResourceActiveAction(res.id);
+    if (result.error) { toast.error(result.error); }
+    else {
+      toast.success(result.is_active
+        ? t("common.reactivate")
+        : t("settings.collectionResources.deactivated"));
+      loadData();
+    }
+    setIsSubmitting(false);
+  }
+
   const isSaveDisabled = isSubmitting || !formName.trim() || !formCode.trim() ||
     (formType === "bank_account" && (!formIban.trim() || ibanStatus === "invalid" || ibanStatus === "checking"));
 
@@ -165,9 +184,20 @@ export function CollectionResourcesSection({ orgId }: Props) {
           </h2>
           <p className="text-sm text-muted-foreground">{t("settings.collectionResources.description")}</p>
         </div>
-        <Button size="sm" onClick={openCreate}>
-          {t("settings.collectionResources.newResource")}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant={showDeactivated ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowDeactivated(!showDeactivated)}
+            title={showDeactivated ? t("settings.paymentTypes.hideDeactivated") : t("settings.paymentTypes.showDeactivated")}
+          >
+            {showDeactivated ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
+            {t("settings.collectionResources.deactivated")}
+          </Button>
+          <Button size="sm" onClick={openCreate}>
+            {t("settings.collectionResources.newResource")}
+          </Button>
+        </div>
       </div>
 
       {resources.length === 0 ? (
@@ -209,6 +239,18 @@ export function CollectionResourcesSection({ orgId }: Props) {
               <div className="flex items-center gap-1 shrink-0">
                 <Button variant="ghost" size="icon-sm" onClick={() => openEdit(res)}>
                   <Pencil className="h-3.5 w-3.5" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  onClick={() => handleToggleActive(res)}
+                  disabled={isSubmitting}
+                  title={res.is_active ? t("common.deactivate") : t("common.reactivate")}
+                >
+                  {res.is_active
+                    ? <PowerOff className="h-3.5 w-3.5 text-muted-foreground" />
+                    : <Power className="h-3.5 w-3.5 text-green-600" />
+                  }
                 </Button>
                 <Button variant="ghost" size="icon-sm" onClick={() => setDeleteTarget(res)}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />

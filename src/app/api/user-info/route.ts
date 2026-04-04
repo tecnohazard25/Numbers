@@ -31,6 +31,16 @@ export async function GET() {
     return NextResponse.json({ profile: null, roles: [], userName: "", impersonating: null });
   }
 
+  let organizationName = "";
+  if (profile.organization_id) {
+    const { data: org } = await admin
+      .from("organizations")
+      .select("name")
+      .eq("id", profile.organization_id)
+      .single();
+    organizationName = org?.name ?? "";
+  }
+
   const { data: userRoles } = await admin
     .from("user_roles")
     .select("*, roles(name)")
@@ -45,6 +55,7 @@ export async function GET() {
     profile,
     roles,
     userName: `${profile.first_name} ${profile.last_name}`.trim() || user.email,
+    organizationName,
     impersonating: isImpersonating
       ? {
           userId: user.id,

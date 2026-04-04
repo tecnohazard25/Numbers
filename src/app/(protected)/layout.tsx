@@ -21,6 +21,7 @@ export default function ProtectedLayout({
   const router = useRouter();
   const [roles, setRoles] = useState<string[]>([]);
   const [userName, setUserName] = useState("");
+  const [organizationName, setOrganizationName] = useState("");
   const [locale, setLocale] = useState("it-IT");
   const [impersonating, setImpersonating] = useState<ImpersonationInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,6 +48,7 @@ export default function ProtectedLayout({
 
       setRoles(data.roles ?? []);
       setUserName(data.userName ?? "");
+      setOrganizationName(data.organizationName ?? "");
       setLocale(data.profile?.locale ?? "it-IT");
       setImpersonating(data.impersonating ?? null);
       setLoading(false);
@@ -65,7 +67,7 @@ export default function ProtectedLayout({
 
   return (
     <I18nProvider locale={locale}>
-      <AppLayout roles={roles} userName={userName} impersonating={impersonating}>
+      <AppLayout roles={roles} userName={userName} organizationName={organizationName} impersonating={impersonating}>
         {children}
       </AppLayout>
     </I18nProvider>

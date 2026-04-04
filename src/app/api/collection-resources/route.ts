@@ -11,12 +11,20 @@ export async function GET(request: Request) {
 
   const admin = createAdminClient();
 
-  const { data: resources, error } = await admin
+  const includeDeactivated = searchParams.get("includeDeactivated") === "true";
+
+  let query = admin
     .from("collection_resources")
     .select("*")
     .eq("organization_id", orgId)
     .is("deleted_at", null)
     .order("name");
+
+  if (!includeDeactivated) {
+    query = query.eq("is_active", true);
+  }
+
+  const { data: resources, error } = await query;
 
   if (error) {
     console.error("Error fetching collection resources:", error);
