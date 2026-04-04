@@ -81,6 +81,15 @@ function SubjectBadge({ status, t }: { status: SubjectReconciliationStatus; t: (
   return <span className={`text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap ${info.className}`}>{info.label}</span>;
 }
 
+function DirectionBadge({ direction, t }: { direction: InvoiceDirection; t: (k: string) => string }) {
+  const map: Record<InvoiceDirection, { label: string; className: string }> = {
+    issued: { label: t("invoices.issued"), className: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200" },
+    received: { label: t("invoices.received"), className: "bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200" },
+  };
+  const info = map[direction];
+  return <span className={`text-xs font-medium px-2 py-0.5 rounded whitespace-nowrap ${info.className}`}>{info.label}</span>;
+}
+
 function DocumentTypeBadge({ type, t }: { type: InvoiceDocumentType; t: (k: string) => string }) {
   const map: Record<InvoiceDocumentType, { label: string; className: string }> = {
     invoice: { label: t("invoices.invoice"), className: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200" },
@@ -121,11 +130,11 @@ export default function InvoicesPage() {
 
   // Filters
   const [selectedAccountId, setSelectedAccountId] = useState("");
-  const [direction, setDirection] = useState<InvoiceDirection>("issued");
+  const [direction, setDirection] = useState("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
-  const [docType, setDocType] = useState("");
+  const [docType, setDocType] = useState("all");
 
   // Dialogs
   const [importOpen, setImportOpen] = useState(false);
@@ -166,11 +175,12 @@ export default function InvoicesPage() {
   const loadInvoices = useCallback(async () => {
     if (!orgId || !selectedAccountId) return;
     setLoading(true);
-    const params = new URLSearchParams({ orgId, sdiAccountId: selectedAccountId, direction });
+    const params = new URLSearchParams({ orgId, sdiAccountId: selectedAccountId });
+    if (direction && direction !== "all") params.set("direction", direction);
     if (dateFrom) params.set("dateFrom", dateFrom);
     if (dateTo) params.set("dateTo", dateTo);
     if (search) params.set("search", search);
-    if (docType) params.set("documentType", docType);
+    if (docType && docType !== "all") params.set("documentType", docType);
 
     const res = await fetch(`/api/invoices?${params}`);
     const data = await res.json();
@@ -207,6 +217,13 @@ export default function InvoicesPage() {
       headerName: t("invoices.date"),
       width: 110,
       sort: "desc",
+    },
+    {
+      field: "direction",
+      headerName: t("invoices.direction"),
+      width: 110,
+      cellRenderer: (params: ICellRendererParams<InvoiceRow>) =>
+        params.data ? <DirectionBadge direction={params.data.direction} t={t} /> : null,
     },
     {
       field: "number",
@@ -299,7 +316,9 @@ export default function InvoicesPage() {
           <Select value={selectedAccountId} onValueChange={(v) => setSelectedAccountId(v ?? "")}>
             <SelectTrigger className="!w-full">
               <SelectValue placeholder={t("invoices.selectSdiAccount")}>
-                {sdiAccounts.find((a) => a.id === selectedAccountId)?.name ?? null}
+                {sdiAccounts.find((a) => a.id === selectedAccountId)
+                  ? `${sdiAccounts.find((a) => a.id === selectedAccountId)!.name} (${sdiAccounts.find((a) => a.id === selectedAccountId)!.code})`
+                  : t("invoices.selectSdiAccount")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
@@ -310,26 +329,22 @@ export default function InvoicesPage() {
           </Select>
         </div>
 
-        {/* Direction tabs */}
-        <div className="flex border rounded-md overflow-hidden">
-          <button
-            type="button"
-            className={`px-4 py-2 text-sm font-medium cursor-pointer transition-colors ${
-              direction === "issued" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-            }`}
-            onClick={() => setDirection("issued")}
-          >
-            {t("invoices.issued")}
-          </button>
-          <button
-            type="button"
-            className={`px-4 py-2 text-sm font-medium cursor-pointer transition-colors ${
-              direction === "received" ? "bg-primary text-primary-foreground" : "hover:bg-muted"
-            }`}
-            onClick={() => setDirection("received")}
-          >
-            {t("invoices.received")}
-          </button>
+        {/* Direction filter */}
+        <div className="w-40">
+          <Select value={direction} onValueChange={(v) => setDirection(v ?? "all")}>
+            <SelectTrigger className="!w-full">
+              <SelectValue placeholder={t("invoices.direction")}>
+                {direction === "issued" ? t("invoices.issued") :
+                 direction === "received" ? t("invoices.received") :
+                 t("invoices.direction")}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">{t("invoices.allDirections")}</SelectItem>
+              <SelectItem value="issued">{t("invoices.issued")}</SelectItem>
+              <SelectItem value="received">{t("invoices.received")}</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Filters */}
@@ -348,20 +363,18 @@ export default function InvoicesPage() {
           placeholder="A"
         />
         <div className="w-40">
-          <Select value={docType} onValueChange={(v) => setDocType(!v || v === "all" ? "" : v)}>
+          <Select value={docType} onValueChange={(v) => setDocType(v ?? "all")}>
             <SelectTrigger className="!w-full">
               <SelectValue placeholder={t("invoices.type")}>
                 {docType === "invoice" ? t("invoices.invoice") :
                  docType === "credit_note" ? t("invoices.creditNote") :
-                 docType === "debit_note" ? t("invoices.debitNote") :
-                 null}
+                 t("invoices.type")}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">{t("common.none")}</SelectItem>
+              <SelectItem value="all">{t("invoices.allTypes")}</SelectItem>
               <SelectItem value="invoice">{t("invoices.invoice")}</SelectItem>
               <SelectItem value="credit_note">{t("invoices.creditNote")}</SelectItem>
-              <SelectItem value="debit_note">{t("invoices.debitNote")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -412,6 +425,7 @@ export default function InvoicesPage() {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
+                  <DirectionBadge direction={inv.direction} t={t} />
                   <span className="font-mono text-sm font-bold">{inv.number}</span>
                   <DocumentTypeBadge type={inv.document_type} t={t} />
                 </div>

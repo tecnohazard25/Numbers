@@ -159,7 +159,7 @@ export function PaymentsTab({ payments, invoiceId, canWrite, onUpdate }: Props) 
     },
     {
       field: "transaction_reconciliation_status",
-      headerName: t("invoices.reconciliation.confirmed"),
+      headerName: t("invoices.reconciliation"),
       width: 130,
       cellRenderer: (params: ICellRendererParams<InvoicePaymentSchedule>) =>
         params.data ? <ReconciliationBadge status={params.data.transaction_reconciliation_status} t={t} /> : null,

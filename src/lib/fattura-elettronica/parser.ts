@@ -178,7 +178,7 @@ export function parseFatturaPA(
       totalTaxable += toNum((r as Record<string, unknown>).ImponibileImporto) ?? 0;
       totalVat += toNum((r as Record<string, unknown>).Imposta) ?? 0;
     }
-    const totalAmount = importoTotale ?? totalTaxable + totalVat;
+    const totalAmount = importoTotale !== null ? importoTotale : totalTaxable + totalVat;
 
     // Parse payments
     const datiPagamento = toArray(body.DatiPagamento);

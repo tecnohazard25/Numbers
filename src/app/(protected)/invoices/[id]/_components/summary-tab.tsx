@@ -113,7 +113,7 @@ export function SummaryTab({ invoice, subjects, onUpdate }: Props) {
                   <SelectValue placeholder={t("invoices.detail.selectSubject")}>
                     {subjects.find((s) => s.id === selectedSubjectId)
                       ? getSubjectLabel(subjects.find((s) => s.id === selectedSubjectId)!)
-                      : null}
+                      : t("invoices.detail.selectSubject")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>

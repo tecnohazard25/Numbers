@@ -45,7 +45,9 @@ export async function GET(request: Request) {
     query = query.eq("document_type", documentType);
   }
   if (search) {
-    query = query.or(`number.ilike.%${search}%,counterpart_name.ilike.%${search}%`);
+    // Escape special PostgREST characters in search
+    const escaped = search.replace(/[%_\\]/g, (c) => `\\${c}`);
+    query = query.or(`number.ilike.%${escaped}%,counterpart_name.ilike.%${escaped}%`);
   }
 
   const { data: invoices, error } = await query;

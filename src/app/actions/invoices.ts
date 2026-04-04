@@ -109,24 +109,23 @@ export async function importInvoicesAction(formData: FormData): Promise<{ succes
         let subjectReconStatus: "unmatched" | "confirmed" | "created" = "unmatched";
 
         if (inv.header.counterpartFiscalCode || inv.header.counterpartVat) {
-          // Try to find existing subject
-          let query = admin
-            .from("subjects")
-            .select("id")
-            .eq("organization_id", organizationId);
-
+          // Build a single OR filter combining all possible matches
+          const orConditions: string[] = [];
           if (inv.header.counterpartFiscalCode) {
-            query = query.or(
-              `tax_code.ilike.${inv.header.counterpartFiscalCode},vat_number.ilike.${inv.header.counterpartFiscalCode}`
-            );
+            const cf = inv.header.counterpartFiscalCode;
+            orConditions.push(`tax_code.ilike.${cf}`, `vat_number.ilike.${cf}`);
           }
           if (inv.header.counterpartVat && inv.header.counterpartVat !== inv.header.counterpartFiscalCode) {
-            query = query.or(
-              `tax_code.ilike.${inv.header.counterpartVat},vat_number.ilike.${inv.header.counterpartVat}`
-            );
+            const vat = inv.header.counterpartVat;
+            orConditions.push(`tax_code.ilike.${vat}`, `vat_number.ilike.${vat}`);
           }
 
-          const { data: foundSubjects } = await query.limit(1);
+          const { data: foundSubjects } = await admin
+            .from("subjects")
+            .select("id")
+            .eq("organization_id", organizationId)
+            .or(orConditions.join(","))
+            .limit(1);
 
           if (foundSubjects && foundSubjects.length > 0) {
             subjectId = foundSubjects[0].id;
@@ -209,7 +208,10 @@ export async function importInvoicesAction(formData: FormData): Promise<{ succes
             vat_nature: l.vatNature,
           }));
 
-          await admin.from("invoice_lines").insert(lineRows);
+          const { error: linesError } = await admin.from("invoice_lines").insert(lineRows);
+          if (linesError) {
+            result.errors.push(`Errore righe fattura ${inv.header.number}: ${linesError.message}`);
+          }
         }
 
         // Insert payment schedule
@@ -220,7 +222,10 @@ export async function importInvoicesAction(formData: FormData): Promise<{ succes
             amount: p.amount,
           }));
 
-          await admin.from("invoice_payment_schedule").insert(paymentRows);
+          const { error: scheduleError } = await admin.from("invoice_payment_schedule").insert(paymentRows);
+          if (scheduleError) {
+            result.errors.push(`Errore scadenze fattura ${inv.header.number}: ${scheduleError.message}`);
+          }
         }
 
         result.imported++;
@@ -407,14 +412,22 @@ export async function markPaymentPaidAction(
 
   const admin = createAdminClient();
 
-  // Verify ownership via invoice
+  // Verify ownership: get schedule's invoice, then check org
   const { data: schedule } = await admin
     .from("invoice_payment_schedule")
-    .select("invoice_id, invoices!inner(organization_id)")
+    .select("id, invoice_id")
     .eq("id", scheduleId)
     .single();
 
-  if (!schedule || (schedule as unknown as { invoices: { organization_id: string } }).invoices.organization_id !== currentUser.profile.organization_id) {
+  if (!schedule) return { error: "Scadenza non trovata" };
+
+  const { data: invoice } = await admin
+    .from("invoices")
+    .select("organization_id")
+    .eq("id", schedule.invoice_id)
+    .single();
+
+  if (!invoice || invoice.organization_id !== currentUser.profile.organization_id) {
     return { error: "Scadenza non trovata" };
   }
 

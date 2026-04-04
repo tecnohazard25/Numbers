@@ -482,6 +482,8 @@
     "paymentSchedule": "Payment Schedule",
     "reconciliation": "Reconciliation",
     "direction": "Direction",
+    "allDirections": "All directions",
+    "allTypes": "All types",
     "currency": "Currency",
     "paymentMethod": "Payment Method",
     "noInvoices": "No invoices found",

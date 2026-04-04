@@ -482,6 +482,8 @@
     "paymentSchedule": "Scadenzario",
     "reconciliation": "Riconciliazione",
     "direction": "Direzione",
+    "allDirections": "Tutte le direzioni",
+    "allTypes": "Tutti i tipi",
     "currency": "Valuta",
     "paymentMethod": "Metodo Pagamento",
     "noInvoices": "Nessuna fattura trovata",

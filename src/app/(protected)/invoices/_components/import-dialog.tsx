@@ -106,7 +106,9 @@ export function ImportDialog({ open, onOpenChange, sdiAccounts, selectedAccountI
               <Select value={accountId} onValueChange={(v) => setAccountId(v ?? "")}>
                 <SelectTrigger className="!w-full">
                   <SelectValue placeholder={t("invoices.selectSdiAccount")}>
-                    {sdiAccounts.find((a) => a.id === accountId)?.name ?? null}
+                    {sdiAccounts.find((a) => a.id === accountId)
+                      ? `${sdiAccounts.find((a) => a.id === accountId)!.name} (${sdiAccounts.find((a) => a.id === accountId)!.code})`
+                      : t("invoices.selectSdiAccount")}
                   </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
